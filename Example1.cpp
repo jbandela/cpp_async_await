@@ -6,35 +6,35 @@
 
 int main()
 {
-  boost::asio::io_service io;
-  boost::asio::deadline_timer t(io, boost::posix_time::seconds(1));
+    boost::asio::io_service io;
+    boost::asio::deadline_timer t(io, boost::posix_time::seconds(1));
 
 
-  try{
+    try{
 
-auto f = get_async_function([&](simple_async_function_helper helper){
-      
-      for(int i = 0; i < 5; i++){
-          auto cb = helper.make_callback([&](const boost::system::error_code& ec)->boost::system::error_code{return ec;});
+        auto f = get_async_function([&](simple_async_function_helper helper){
 
-        t.async_wait(cb);
-        auto ec = helper.await<boost::system::error_code>();
-        std::cout << "Timer went off " << (i+1) << " times with ec = " << ec.message() << std::endl;
-        if(i==1) throw std::exception("Exception");
-        t.expires_from_now(boost::posix_time::seconds(1));
+            for(int i = 0; i < 5; i++){
+                auto cb = helper.make_callback([&](const boost::system::error_code& ec)->boost::system::error_code{return ec;});
 
-      }
+                t.async_wait(cb);
+                auto ec = helper.await<boost::system::error_code>();
+                std::cout << "Timer went off " << (i+1) << " times with ec = " << ec.message() << std::endl;
+                if(i==1) throw std::exception("Exception");
+                t.expires_from_now(boost::posix_time::seconds(1));
 
-  });
+            }
 
-  f(io);
+        });
 
-  }
-  catch(std::exception& e){
-      std::cerr << e.what() << "\n";
-  }
+        f(io);
+
+    }
+    catch(std::exception& e){
+        std::cerr << e.what() << "\n";
+    }
 
 
 
-  return 0;
+    return 0;
 }
