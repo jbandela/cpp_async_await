@@ -6,7 +6,8 @@
 #include <type_traits>
 #include <assert.h>
 
-
+namespace asio_helper{
+namespace detail{
 struct context_holder:std::enable_shared_from_this<context_holder>{
     boost::context::fcontext_t* fc_;
     boost::context::fcontext_t* fc_original_;
@@ -119,11 +120,11 @@ struct callback{
 
 
 };
+}
+ struct async_helper{
+    std::shared_ptr<detail::context_holder> context_;
 
- struct simple_async_function_helper{
-    std::shared_ptr<context_holder> context_;
-
-    simple_async_function_helper(std::shared_ptr<context_holder> c)
+    async_helper(std::shared_ptr<detail::context_holder> c)
         :context_(c)
     {
 
@@ -132,7 +133,7 @@ struct callback{
     template<class R>
     R await(){
         assert(context_->fc_original_);
-        auto ret = reinterpret_cast<ret_type*>(boost::context::jump_fcontext(context_->fc_,context_->fc_original_,reinterpret_cast<intptr_t>(nullptr)));
+        auto ret = reinterpret_cast<detail::ret_type*>(boost::context::jump_fcontext(context_->fc_,context_->fc_original_,reinterpret_cast<intptr_t>(nullptr)));
         if(ret->eptr_){
             std::rethrow_exception(ret->eptr_);
         }
@@ -143,13 +144,13 @@ struct callback{
     }
     
     template<class F>
-    callback<F> make_callback(F f){
-        callback<F> ret(context_,f);
+    detail::callback<F> make_callback(F f){
+        detail::callback<F> ret(context_,f);
         return ret;
     }
 
 };
-
+ namespace detail{
 template<class F>
 struct simple_async_function_holder:public context_holder{
 
@@ -161,7 +162,7 @@ struct simple_async_function_holder:public context_holder{
         auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
         auto ptr = pthis->shared_from_this();
         try{
-             simple_async_function_helper helper(ptr);
+             async_helper helper(ptr);
              pthis->f_(helper);
         }
         catch(...){
@@ -191,22 +192,6 @@ struct simple_async_function_holder:public context_holder{
 
 };
 
-
-template<class F>
-void do_async(boost::asio::io_service& s, F f){
-    auto ret = std::make_shared<simple_async_function_holder<F>>(f);
-
-   ret->run();
-   while(!ret->done()){
-       s.run_one();
-   }
-   if(ret->eptr_){
-       std::rethrow_exception(ret->eptr_);
-
-   }
-}
-
-
 template<class F>
 struct simple_async_function:public std::unary_function<boost::asio::io_service&,void>{
 
@@ -227,9 +212,28 @@ private:
     std::shared_ptr<simple_async_function_holder<F>> holder_;
 
 };
+ }
+template<class F>
+void do_async(boost::asio::io_service& s, F f){
+    auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
+
+   ret->run();
+   while(!ret->done()){
+       s.run_one();
+   }
+   if(ret->eptr_){
+       std::rethrow_exception(ret->eptr_);
+
+   }
+}
+
+
+
 
 template<class F>
-simple_async_function<F> get_async_function(F f){
-    return simple_async_function<F>(f);
+detail::simple_async_function<F> get_async_function(F f){
+    return detail::simple_async_function<F>(f);
+
+}
 
 }

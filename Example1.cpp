@@ -12,7 +12,7 @@ int main()
 
     try{
 
-        auto f = get_async_function([&](simple_async_function_helper helper){
+        auto f = asio_helper::get_async_function([&](asio_helper::async_helper helper){
 
             for(int i = 0; i < 5; i++){
                 auto cb = helper.make_callback([&](const boost::system::error_code& ec)->boost::system::error_code{return ec;});

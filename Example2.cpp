@@ -39,7 +39,7 @@ int main(){
         tcp::resolver::query query(server, "http");
 
         // This allows us to do await
-        do_async(io,[&](simple_async_function_helper helper){
+        asio_helper::do_async(io,[&](asio_helper::async_helper helper){
 
             // Do async resolve
             auto resolve_cb = helper.make_callback([&](
