@@ -205,3 +205,31 @@ void do_async(boost::asio::io_service& s, F f){
 
    }
 }
+
+
+template<class F>
+struct simple_async_function:public std::unary_function<boost::asio::io_service&,void>{
+
+    simple_async_function(F f):holder_( std::make_shared<simple_async_function_holder<F>>(f)){}
+
+    void operator()(boost::asio::io_service& io){
+        holder_->run();
+        while(!holder_->done()){
+            io.run_one();
+        }
+        if(holder_->eptr_){
+            std::rethrow_exception(holder_->eptr_);
+
+        }
+    }
+
+private:
+    std::shared_ptr<simple_async_function_holder<F>> holder_;
+
+};
+
+template<class F>
+simple_async_function<F> get_async_function(F f){
+    return simple_async_function<F>(f);
+
+}
