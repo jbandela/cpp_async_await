@@ -16,11 +16,13 @@ int main(){
 
     boost::asio::io_service io;
 
-
+    
     tcp::resolver resolver_(io);
     tcp::socket socket_(io);
     boost::asio::streambuf request_;
     boost::asio::streambuf response_;
+
+
     // Form the request. We specify the "Connection: close" header so that the
     // server will close the socket after transmitting the response. This will
     // allow us to treat all data up until the EOF as the content.
@@ -73,7 +75,6 @@ int main(){
         helper.await<int>();
 
         // Check that the response is OK
-        // Check that response is OK.
         std::istream response_stream(&response_);
         std::string http_version;
         response_stream >> http_version;
@@ -97,8 +98,6 @@ int main(){
             readwrite_callback);
         helper.await<int>();
 
-        // Process the response headers
-
         // Process the response headers.
         std::istream response_stream2(&response_);
         std::string header;
@@ -112,6 +111,8 @@ int main(){
 
         auto content_callback = helper.make_callback(
             [&](const boost::system::error_code& err,std::size_t)->bool{
+                // This callback helps us read until eof
+                // Return value is if we are done or not
                 if(!err){
                     return false;
                 }else if(err == boost::asio::error::eof){
