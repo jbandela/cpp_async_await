@@ -34,6 +34,7 @@ int main(){
     // into a list of endpoints.
     tcp::resolver::query query(server, "http");
 
+    // This allows us to do wait_async
     do_async(io,[&](simple_async_function_helper helper){
 
         // Do async resolve
@@ -50,19 +51,11 @@ int main(){
         auto endpoint_iterator = helper.await<tcp::resolver::iterator>();
 
         // Do async connect
-        auto generic_callback = helper.make_callback(
-            [&](const boost::system::error_code& err)->int{
-                if(err){
-                    std::cout << "Error: " << err.message() << "\n";
-                    throw std::runtime_error(err.message());
-                }
-                return 0;
-        });
         boost::asio::async_connect(socket_,
             endpoint_iterator,resolve_cb);
         helper.await<tcp::resolver::iterator>();
 
-                auto readwrite_callback = helper.make_callback(
+        auto readwrite_callback = helper.make_callback(
             [&](const boost::system::error_code& err,std::size_t)->int{
                 if(err){
                     std::cout << "Error: " << err.message() << "\n";
@@ -80,97 +73,73 @@ int main(){
         helper.await<int>();
 
         // Check that the response is OK
-              // Check that response is OK.
+        // Check that response is OK.
+        std::istream response_stream(&response_);
+        std::string http_version;
+        response_stream >> http_version;
+        unsigned int status_code;
+        response_stream >> status_code;
+        std::string status_message;
+        std::getline(response_stream, status_message);
+        if (!response_stream || http_version.substr(0, 5) != "HTTP/")
         {
-            std::istream response_stream(&response_);
-            std::string http_version;
-            response_stream >> http_version;
-            unsigned int status_code;
-            response_stream >> status_code;
-            std::string status_message;
-            std::getline(response_stream, status_message);
-            if (!response_stream || http_version.substr(0, 5) != "HTTP/")
-            {
-                std::cout << "Invalid response\n";
-                return;
-            }
-            if (status_code != 200)
-            {
-                std::cout << "Response returned with status code ";
-                std::cout << status_code << "\n";
-                return;
-            }
+            std::cout << "Invalid response\n";
+            return;
         }
-      // Read the response headers, which are terminated by a blank line.
-      boost::asio::async_read_until(socket_, response_, "\r\n\r\n",
-          readwrite_callback);
-      helper.await<int>();
+        if (status_code != 200)
+        {
+            std::cout << "Response returned with status code ";
+            std::cout << status_code << "\n";
+            return;
+        }
+        // Read the response headers, which are terminated by a blank line.
+        boost::asio::async_read_until(socket_, response_, "\r\n\r\n",
+            readwrite_callback);
+        helper.await<int>();
 
-      // Process the response headers
+        // Process the response headers
 
-          {
-              // Process the response headers.
-              std::istream response_stream2(&response_);
-              std::string header;
-              while (std::getline(response_stream2, header) && header != "\r")
-                  std::cout << header << "\n";
-              std::cout << "\n";
+        // Process the response headers.
+        std::istream response_stream2(&response_);
+        std::string header;
+        while (std::getline(response_stream2, header) && header != "\r")
+            std::cout << header << "\n";
+        std::cout << "\n";
 
-              // Write whatever content we already have to output.
-              if (response_.size() > 0)
-                  std::cout << &response_;
-          }
+        // Write whatever content we already have to output.
+        if (response_.size() > 0)
+            std::cout << &response_;
 
-          // Start reading remaining data until EOF.
-          boost::asio::async_read(socket_, response_,
-              boost::asio::transfer_at_least(1),
-             readwrite_callback);
-          helper.await<int>();
-
-
-          auto content_callback = helper.make_callback(
-              [&](const boost::system::error_code& err,std::size_t)->bool{
-                  if(!err){
-                      return false;
-                  }else if(err == boost::asio::error::eof){
-                      return true;
-                  }
-                  else{
-                      std::cout << "Error: " << err.message() << "\n";
-                      throw std::runtime_error(err.message());
-                  }
-                  return 0;
-          });
-
-  
-      // Write all of the data that has been read so far.
-      std::cout << &response_;
-
-      bool done = false;
-      while(!done){
-          // Continue reading remaining data until EOF.
-
-          boost::asio::async_read(socket_, response_,
-              boost::asio::transfer_at_least(1),
-              content_callback);
-          done = helper.await<bool>();
-          // Write all of the data so far
-          std::cout <<&response_;
- 
+        auto content_callback = helper.make_callback(
+            [&](const boost::system::error_code& err,std::size_t)->bool{
+                if(!err){
+                    return false;
+                }else if(err == boost::asio::error::eof){
+                    return true;
+                }
+                else{
+                    std::cout << "Error: " << err.message() << "\n";
+                    throw std::runtime_error(err.message());
+                }
+                return 0;
+        });
 
 
-    }
+        bool done = false;
+        while(!done){
+            // Continue reading remaining data until EOF.
 
-
-
-
-
+            boost::asio::async_read(socket_, response_,
+                boost::asio::transfer_at_least(1),
+                content_callback);
+            done = helper.await<bool>();
+            // Write all of the data so far
+            std::cout <<&response_<<std::flush;
+        }
 
 
 
     });
-
-
 
 
 
