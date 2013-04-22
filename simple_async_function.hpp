@@ -168,7 +168,10 @@ struct simple_async_function_holder:public context_holder{
             pthis->eptr_ = std::current_exception();
         }
         pthis->done_ = true;
-        boost::context::jump_fcontext(pthis->fc_,pthis->fc_original_,reinterpret_cast<intptr_t>(nullptr));
+        auto fc = pthis->fc_;
+        auto fc_original = pthis->fc_original_;
+        ptr.reset();
+        boost::context::jump_fcontext(fc,fc_original,reinterpret_cast<intptr_t>(nullptr));
     }
     simple_async_function_holder(F f):context_holder(&context_function),f_(f),done_(false),eptr_(nullptr){
 
