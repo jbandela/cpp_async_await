@@ -156,7 +156,8 @@ struct simple_async_function{
 
     std::shared_ptr<context_holder> context_;
     F f_;
-
+    bool done_;
+    std::exception_ptr eptr_;
 
     static void context_function(intptr_t p){
         auto pthis = reinterpret_cast<simple_async_function*>(p);
@@ -164,20 +165,18 @@ struct simple_async_function{
              auto ptr = pthis->context_;
              simple_async_function_helper helper(ptr);
              pthis->f_(helper);
-
-
         }
         catch(...){
-
+            pthis->eptr_ = std::current_exception();
         }
+        pthis->done_ = true;
         boost::context::jump_fcontext(pthis->context_->fc_,pthis->context_->fc_original_,reinterpret_cast<intptr_t>(nullptr));
-
-    };
-    simple_async_function(F f):f_(f){
+    }
+    simple_async_function(F f):f_(f),done_(false),eptr_(nullptr){
         context_ = std::make_shared<context_holder>(&context_function);
 
     }
-
+    bool done(){return done_;}
     void operator()(){
         boost::context::fcontext_t mycontext;
         context_->fc_original_ = &mycontext;
@@ -192,10 +191,17 @@ struct simple_async_function{
 
 
 template<class F>
- simple_async_function<F> make_async(F f){
+void do_async(boost::asio::io_service& s, F f){
     simple_async_function<F> ret(f);
 
-   return ret;
+   ret();
+   while(!ret.done()){
+       s.run_one();
+   }
+   if(ret.eptr_){
+       std::rethrow_exception(ret.eptr_);
+
+   }
 }
 
 void print(const boost::system::error_code& /*e*/)
@@ -206,26 +212,33 @@ void print(const boost::system::error_code& /*e*/)
 int main()
 {
   boost::asio::io_service io;
-  boost::asio::deadline_timer t(io, boost::posix_time::seconds(5));
+  boost::asio::deadline_timer t(io, boost::posix_time::seconds(1));
 
 
-auto f = make_async([&](simple_async_function_helper helper){
+  try{
+
+do_async(io,[&](simple_async_function_helper helper){
       
       for(int i = 0; i < 5; i++){
-          auto cb = helper.make_callback([&](const boost::system::error_code&)->int{std::cerr << "Inside callback\n";return 0;});
+          auto cb = helper.make_callback([&](const boost::system::error_code& ec)->boost::system::error_code{return ec;});
 
         t.async_wait(cb);
-        helper.await<int>();
-        t.expires_from_now(boost::posix_time::seconds(5));
-        std::cout << "Timer went off " << (i+1) << " times " << std::endl;
-      }
+        auto ec = helper.await<boost::system::error_code>();
+        std::cout << "Timer went off " << (i+1) << " times with ec = " << ec.message() << std::endl;
+        t.expires_from_now(boost::posix_time::seconds(1));
 
+      }
 
   });
 
+  }
+  catch(std::exception& e){
+      std::cerr << e.what() << "\n";
+  }
+
   //t.async_wait(&print);
- f();
-  io.run();
+
+ // io.run();
 
   return 0;
 }
