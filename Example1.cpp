@@ -20,7 +20,7 @@ int main()
                 t.async_wait(cb);
                 auto ec = helper.await<boost::system::error_code>();
                 std::cout << "Timer went off " << (i+1) << " times with ec = " << ec.message() << std::endl;
-                if(i==1) throw std::exception("Exception");
+                //if(i==1) throw std::exception("Exception");
                 t.expires_from_now(boost::posix_time::seconds(1));
 
             }
