@@ -1,3 +1,4 @@
+#define ASIO_HELPER_OUTPUT_ENTER_EXIT
 #include "asio_helper.hpp"
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
