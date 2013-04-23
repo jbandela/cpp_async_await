@@ -29,7 +29,7 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
 
 
     // This allows us to do await
-    asio_helper::do_async([=,&io](asio_helper::async_helper helper){
+    asio_helper::do_async(io,[=,&io](asio_helper::async_helper helper){
         tcp::resolver resolver_(io);
         tcp::socket socket_(io);
         boost::asio::streambuf request_;
@@ -53,11 +53,13 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         auto resolve_cb = helper.make_callback([&](
             const boost::system::error_code& err,
             tcp::resolver::iterator iter)->tcp::resolver::iterator{
-                if(err){
-                    std::cout << "Error: " << err.message() << "\n";
+                if(!err){
+                 return iter;
+                }
+                else{
+                   std::cout << "Error: " << err.message() << "\n";
                     throw std::runtime_error(err.message());
                 }
-                return iter;
         });
         resolver_.async_resolve(query,resolve_cb);
         auto endpoint_iterator = helper.await<tcp::resolver::iterator>();
@@ -69,11 +71,13 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
 
         auto readwrite_callback = helper.make_callback(
             [&](const boost::system::error_code& err,std::size_t)->int{
-                if(err){
+                if(!err){
+                    return 0;
+                }
+                else{
                     std::cout << "Error: " << err.message() << "\n";
                     throw std::runtime_error(err.message());
                 }
-                return 0;
         });
         // Connection was successful, send request
         boost::asio::async_write(socket_,request_,readwrite_callback);
