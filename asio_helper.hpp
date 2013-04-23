@@ -166,6 +166,7 @@ namespace asio_helper{
                 const boost::system::error_code& ec,
                 boost::asio::ip::tcp::resolver::iterator  iterator)
             {
+                return std::make_pair(ec,iterator);
             }
         };
 
