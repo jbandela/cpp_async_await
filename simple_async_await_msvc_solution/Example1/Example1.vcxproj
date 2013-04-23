@@ -79,7 +79,7 @@
     <ClCompile Include="..\..\Example1.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\simple_async_function.hpp" />
+    <ClInclude Include="..\..\asio_helper.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

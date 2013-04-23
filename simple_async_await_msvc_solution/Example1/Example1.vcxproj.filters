@@ -20,7 +20,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\simple_async_function.hpp">
+    <ClInclude Include="..\..\asio_helper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

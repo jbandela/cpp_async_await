@@ -1,3 +1,16 @@
+// This file is adapted almost verbative where possible from
+// the boost asio async http example
+//
+// async_client.cpp
+// ~~~~~~~~~~~~~~~~
+//
+// Copyright (c) 2003-2012 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// Modified by John R. Bandela
+
 #include "asio_helper.hpp"
 
 #include <iostream>
@@ -121,6 +134,10 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
                 }
                 return 0;
         });
+
+        // Notice how are callbacks are pretty simple
+        // They just return any useful info and are not 
+        // burdened with a lot of complicated logic
 
 
         bool done = false;
