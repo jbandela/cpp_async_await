@@ -156,7 +156,8 @@ struct simple_async_function_holder:public context_holder{
 
     F f_;
     bool done_;
-    std::exception_ptr eptr_;
+    //std::exception_ptr eptr_;
+    boost::asio::io_service& io_;
 
     static void context_function(intptr_t p){
         auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
@@ -166,7 +167,8 @@ struct simple_async_function_holder:public context_holder{
              pthis->f_(helper);
         }
         catch(...){
-            pthis->eptr_ = std::current_exception();
+            auto eptr = std::current_exception();
+            pthis->io_.post([eptr](){std::rethrow_exception(eptr);});
         }
         pthis->done_ = true;
         auto fc = pthis->fc_;
@@ -174,7 +176,7 @@ struct simple_async_function_holder:public context_holder{
         ptr.reset();
         boost::context::jump_fcontext(fc,fc_original,reinterpret_cast<intptr_t>(nullptr));
     }
-    simple_async_function_holder(F f):context_holder(&context_function),f_(f),done_(false),eptr_(nullptr){
+    simple_async_function_holder(boost::asio::io_service& io, F f):context_holder(&context_function),f_(f),done_(false),io_(io){
 
     }
     bool done(){return done_;}
@@ -190,50 +192,46 @@ struct simple_async_function_holder:public context_holder{
         std::cerr << "\nDestructor\n";
     }
 
-};
 
-template<class F>
-struct simple_async_function:public std::unary_function<boost::asio::io_service&,void>{
-
-    simple_async_function(F f):holder_( std::make_shared<simple_async_function_holder<F>>(f)){}
-
-    void operator()(boost::asio::io_service& io){
-        holder_->run();
-        while(!holder_->done()){
-            io.run_one();
-        }
-        if(holder_->eptr_){
-            std::rethrow_exception(holder_->eptr_);
-
-        }
-    }
-
-private:
-    std::shared_ptr<simple_async_function_holder<F>> holder_;
 
 };
+//
+//template<class F>
+//struct simple_async_function:public std::unary_function<boost::asio::io_service&,void>{
+//
+//    simple_async_function(F f):holder_( std::make_shared<simple_async_function_holder<F>>(f)){}
+//
+//    void operator()(boost::asio::io_service& io){
+//        holder_->run();
+//        while(!holder_->done()){
+//            io.run_one();
+//        }
+//        if(holder_->eptr_){
+//            std::rethrow_exception(holder_->eptr_);
+//
+//        }
+//    }
+//
+//private:
+//    std::shared_ptr<simple_async_function_holder<F>> holder_;
+//
+//};
  }
 template<class F>
-void do_async(boost::asio::io_service& s, F f){
-    auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
+void do_async(boost::asio::io_service& io, F f){
+    auto ret = std::make_shared<detail::simple_async_function_holder<F>>(io,f);
 
    ret->run();
-   while(!ret->done()){
-       s.run_one();
-   }
-   if(ret->eptr_){
-       std::rethrow_exception(ret->eptr_);
-
-   }
-}
-
-
-
-
-template<class F>
-detail::simple_async_function<F> get_async_function(F f){
-    return detail::simple_async_function<F>(f);
 
 }
+
+
+
+
+//template<class F>
+//detail::simple_async_function<F> get_async_function(F f){
+//    return detail::simple_async_function<F>(f);
+//
+//}
 
 }

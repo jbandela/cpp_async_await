@@ -144,7 +144,7 @@ int main(){
 
         });
 
-
+        io.run();
     }
     catch(std::exception& e){
         std::cerr << "Exception caught " << e.what() << "\n";
