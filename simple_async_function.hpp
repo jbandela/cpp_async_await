@@ -156,7 +156,6 @@ namespace asio_helper{
 
             F f_;
             bool done_;
-            //std::exception_ptr eptr_;
             boost::asio::io_service& io_;
 
             static void context_function(intptr_t p){
