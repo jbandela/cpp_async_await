@@ -23,7 +23,6 @@
 
 using boost::asio::ip::tcp;
 
-
 void get_http(boost::asio::io_service& io,std::string server, std::string path){
 
     // This allows us to do await
@@ -61,13 +60,11 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         std::tie(ec,std::ignore) = helper.await(connect_cb);
         if(ec){throw boost::system::system_error(ec);}
 
-
         // Connection was successful, send request
         auto write_cb = helper.make_callback(asio_helper::handlers::write_handler());
         boost::asio::async_write(socket_,request_,write_cb);
         std::tie(ec,std::ignore) = helper.await(write_cb);
         if(ec){throw boost::system::system_error(ec);}
-
 
         // Read the response status line
         auto read_cb = helper.make_callback(asio_helper::handlers::read_handler());
@@ -95,6 +92,7 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
             std::cout << status_code << "\n";
             return;
         }
+
         // Read the response headers, which are terminated by a blank line.
         boost::asio::async_read_until(socket_, response_, "\r\n\r\n",
             read_cb);
@@ -112,10 +110,9 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         if (response_.size() > 0)
             std::cout << &response_;
 
+        // Continue reading remaining data until EOF.
         bool done = false;
         while(!done){
-            // Continue reading remaining data until EOF.
-
             boost::asio::async_read(socket_, response_,
                 boost::asio::transfer_at_least(1),
                 read_cb);
@@ -125,11 +122,8 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
             // Write all of the data so far
             std::cout << &response_;
         }
-    });
+   });
 }
-
-
-
 
 int main(int argc, char* argv[])
 {
@@ -137,7 +131,7 @@ int main(int argc, char* argv[])
     {
         if (argc != 3)
         {
-            std::cout << "Usage: async_client <server> <path>\n";
+            std::cout << "Usage: example2 <server> <path>\n";
             std::cout << "Example:\n";
             std::cout << "  async_client www.boost.org /LICENSE_1_0.txt\n";
             return 1;
@@ -146,7 +140,6 @@ int main(int argc, char* argv[])
         boost::asio::io_service io_service;
         get_http(io_service,argv[1],argv[2]);
         io_service.run();
-
     }
     catch (std::exception& e)
     {
