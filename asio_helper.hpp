@@ -1,32 +1,28 @@
 #include <boost/asio.hpp>
-#include <boost/context/all.hpp>
-#include <boost/coroutine/stack_allocator.hpp>
+#include <boost/coroutine/all.hpp>
 #include <memory>
 #include <exception>
 #include <type_traits>
 #include <assert.h>
 
+struct EnterExit{
+    EnterExit():n_(++number_){ std::cerr << "==" << n_ << " Entering\n";}
+    int n_;
+    std::string s_;
+    static int number_;
+    ~EnterExit(){std::cerr << "==" << n_ << " Exiting\n";}
+
+};
+int EnterExit::number_ = 0;
+
 namespace asio_helper{
     namespace detail{
-        struct context_holder:std::enable_shared_from_this<context_holder>{
-            boost::context::fcontext_t* fc_;
-            boost::context::fcontext_t* fc_original_;
-            boost::coroutines::stack_allocator stack_;
-            void* sp_;
-            std::size_t size_;
-
-            typedef void(*fptr)(intptr_t);
-
-
-            context_holder(fptr f){
-                size_ = boost::coroutines::stack_allocator::default_stacksize();
-                sp_ = stack_.allocate(size_);
-                fc_ = boost::context::make_fcontext(sp_,size_,f);
-                fc_original_ = nullptr;
-            }
-            ~context_holder(){
-                stack_.deallocate(sp_,size_);
-            }
+        struct coroutine_holder:std::enable_shared_from_this<coroutine_holder>{
+            EnterExit e;
+            typedef boost::coroutines::coroutine<void*(void*)> co_type;
+            std::unique_ptr<co_type> coroutine_;
+            co_type::caller_type* coroutine_caller_;
+            coroutine_holder():coroutine_(nullptr),coroutine_caller_(nullptr){}
 
         };
 
@@ -41,12 +37,11 @@ namespace asio_helper{
 
             F f_;
 
-            std::shared_ptr<context_holder> context_;
+            std::shared_ptr<coroutine_holder> co_;
 
-            callback(std::shared_ptr<context_holder> c,F f):f_(f),context_(c){}
+            callback(std::shared_ptr<coroutine_holder> c,F f):f_(f),co_(c){}
 
             void operator()(){
-                boost::context::fcontext_t mycontext;
                 ret_type r;
                 try{
                     auto ret = f_();
@@ -58,14 +53,14 @@ namespace asio_helper{
                     r.pv_ = nullptr;
                 }
 
-                context_->fc_original_ = &mycontext;
-                boost::context::jump_fcontext(&mycontext,context_->fc_,reinterpret_cast<intptr_t>(&r));
-                context_->fc_original_ = nullptr;
+                co_->fc_original_ = &mycontext;
+                boost::context::jump_fcontext(&mycontext,co_->fc_,reinterpret_cast<intptr_t>(&r));
+                co_->fc_original_ = nullptr;
             }
 
             template<class T0>
             void operator()(T0&& t0){
-                boost::context::fcontext_t mycontext;
+                EnterExit e;
                 ret_type r;
                 try{
                     auto ret = f_(std::forward<T0>(t0));
@@ -76,14 +71,10 @@ namespace asio_helper{
                     r.eptr_ = std::current_exception();
                     r.pv_ = nullptr;
                 }
-
-                context_->fc_original_ = &mycontext;
-                boost::context::jump_fcontext(&mycontext,context_->fc_,reinterpret_cast<intptr_t>(&r));
-                context_->fc_original_ = nullptr;
+                (*co_->coroutine_)(&r);
             }    
             template<class T0,class T1>
             void operator()(T0&& t0,T1&& t1){
-                boost::context::fcontext_t mycontext;
                 ret_type r;
                 try{
                     auto ret = f_(std::forward<T0>(t0),std::forward<T1>(t1));
@@ -95,13 +86,10 @@ namespace asio_helper{
                     r.pv_ = nullptr;
                 }
 
-                context_->fc_original_ = &mycontext;
-                boost::context::jump_fcontext(&mycontext,context_->fc_,reinterpret_cast<intptr_t>(&r));
-                context_->fc_original_ = nullptr;
+                (*co_->coroutine_)(&r);
             }  
             template<class T0,class T1,class T2>
             void operator()(T0&& t0,T1&& t1,T2&& t2){
-                boost::context::fcontext_t mycontext;
 
                 ret_type r;
                 try{
@@ -113,27 +101,26 @@ namespace asio_helper{
                     r.eptr_ = std::current_exception();
                     r.pv_ = nullptr;
                 }
-                context_->fc_original_ = &mycontext;
-                boost::context::jump_fcontext(&mycontext,context_->fc_,reinterpret_cast<intptr_t>(&r));
-                context_->fc_original_ = nullptr;
+                (*co_->coroutine_)(&r);
             }
 
 
         };
     }
     struct async_helper{
-        std::shared_ptr<detail::context_holder> context_;
+        std::shared_ptr<detail::coroutine_holder> co_;
 
-        async_helper(std::shared_ptr<detail::context_holder> c)
-            :context_(c)
+        async_helper(std::shared_ptr<detail::coroutine_holder> c)
+            :co_(c)
         {
 
         }
 
         template<class R>
         R await(){
-            assert(context_->fc_original_);
-            auto ret = reinterpret_cast<detail::ret_type*>(boost::context::jump_fcontext(context_->fc_,context_->fc_original_,reinterpret_cast<intptr_t>(nullptr)));
+            assert(co_->coroutine_caller_);
+            (*co_->coroutine_caller_)(nullptr);
+            auto ret = reinterpret_cast<detail::ret_type*>(co_->coroutine_caller_->get());
             if(ret->eptr_){
                 std::rethrow_exception(ret->eptr_);
             }
@@ -145,45 +132,32 @@ namespace asio_helper{
 
         template<class F>
         detail::callback<F> make_callback(F f){
-            detail::callback<F> ret(context_,f);
+            detail::callback<F> ret(co_,f);
             return ret;
         }
 
     };
     namespace detail{
         template<class F>
-        struct simple_async_function_holder:public context_holder{
+        struct simple_async_function_holder:public coroutine_holder{
 
             F f_;
-            bool done_;
-            boost::asio::io_service& io_;
-
-            static void context_function(intptr_t p){
+            static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
+                EnterExit e;
+                auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
+                pthis->coroutine_caller_ = &ca;
                 auto ptr = pthis->shared_from_this();
-                try{
                     async_helper helper(ptr);
                     pthis->f_(helper);
-                }
-                catch(...){
-                    auto eptr = std::current_exception();
-                    pthis->io_.post([eptr](){std::rethrow_exception(eptr);});
-                }
-                pthis->done_ = true;
-                auto fc = pthis->fc_;
-                auto fc_original = pthis->fc_original_;
-                ptr.reset();
-                boost::context::jump_fcontext(fc,fc_original,reinterpret_cast<intptr_t>(nullptr));
+                return;
             }
-            simple_async_function_holder(boost::asio::io_service& io, F f):context_holder(&context_function),f_(f),done_(false),io_(io){
+            simple_async_function_holder(F f):f_(f){
 
             }
-            bool done(){return done_;}
             void run(){
-                boost::context::fcontext_t mycontext;
-                this->fc_original_ = &mycontext;
-                boost::context::jump_fcontext(&mycontext,this->fc_,reinterpret_cast<intptr_t>(this));
-                this->fc_original_ = nullptr;
+                coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,this));
+
 
             }
 
@@ -191,8 +165,8 @@ namespace asio_helper{
 
     }
     template<class F>
-    void do_async(boost::asio::io_service& io, F f){
-        auto ret = std::make_shared<detail::simple_async_function_holder<F>>(io,f);
+    void do_async(F f){
+        auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
 
         ret->run();
 

@@ -14,7 +14,7 @@ int main()
 
 
         // This allows us to  do our await magic
-        asio_helper::do_async(io,[&](asio_helper::async_helper helper){
+        asio_helper::do_async([&](asio_helper::async_helper helper){
 
             // Notice how we can use a real loop
             for(int i = 0; i < 5; i++){

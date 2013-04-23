@@ -29,7 +29,7 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
 
 
     // This allows us to do await
-    asio_helper::do_async(io,[=,&io](asio_helper::async_helper helper){
+    asio_helper::do_async([=,&io](asio_helper::async_helper helper){
         tcp::resolver resolver_(io);
         tcp::socket socket_(io);
         boost::asio::streambuf request_;
@@ -151,9 +151,6 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
             // Write all of the data so far
             std::cout <<&response_<<std::flush;
         }
-
-
-
     });
 
 
