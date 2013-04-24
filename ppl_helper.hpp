@@ -9,6 +9,7 @@
 #include <utility>
 #include <assert.h>
 #include <type_traits>
+#include <concurrent_vector.h>
 
 #ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
 #define ASIO_HELPER_ENTER_EXIT ::asio_helper::detail::EnterExit asio_helper_enter_exit_var;
@@ -36,6 +37,12 @@ namespace asio_helper{
             co_type::caller_type* coroutine_caller_;
             coroutine_holder():coroutine_(nullptr),coroutine_caller_(nullptr){}
 
+            static void addtoglobal(std::shared_ptr<coroutine_holder> ptr){
+                static concurrency::concurrent_vector<std::shared_ptr<coroutine_holder>> vec_;
+                vec_.push_back(ptr);
+
+            }
+
         };
 
         struct ret_type{
@@ -57,8 +64,10 @@ namespace asio_helper{
 
     template<class T>
     struct async_helper{
-        std::shared_ptr<detail::coroutine_holder> co_;
-        async_helper(std::shared_ptr<detail::coroutine_holder> c)
+        //typedef std::shared_ptr<detail::coroutine_holder>
+        typedef detail::coroutine_holder* co_ptr;
+        co_ptr co_;
+        async_helper(co_ptr c)
             :co_(c)
         {
 
@@ -74,12 +83,14 @@ namespace asio_helper{
             auto c = co_->coroutine_.get();
             auto co = co_;
             auto rettask = t.then([co](concurrency::task<R> t){
+                auto c =co;
                 detail::ret_type ret;
                 ret.eptr_ = nullptr;
                 ret.pv_ = nullptr;
                 ret.pv_ = &t;
                 (*co->coroutine_)(&ret);
-                return *static_cast<concurrency::task<T>*>(co->coroutine_->get());
+                auto r = *static_cast<concurrency::task<T>*>(co->coroutine_->get());
+                return r;
             });
 
             (*co_->coroutine_caller_)(&rettask);
@@ -103,28 +114,29 @@ namespace asio_helper{
                 auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
                 pthis->coroutine_caller_ = &ca;
-                auto ptr = pthis->shared_from_this();
                 try{
-                    async_helper<return_type> helper(ptr);
+                    async_helper<return_type> helper(pthis);
                     auto ret = pthis->f_(helper);
-                    helper.co_.reset();
-                    concurrency::task<return_type> rettask([&ptr,pthis,ret]{
-                        ptr.reset();
+                   // helper.co_.reset();
+                    concurrency::task<return_type> rettask([pthis,ret](){
+                     //   ptr.reset();
                         return ret;   
                     });
                     ca(&rettask);
                 }
                 catch(std::exception&){
+                    //auto co = pthis->coroutine_.release();
                     auto eptr = std::current_exception();
-                    concurrency::task<return_type> rettask([&ptr,pthis,eptr]{
-
-                        ptr.reset();
+                    concurrency::task<return_type> rettask([eptr](){
+                        //(*ptr->coroutine_)(nullptr);
+                        //delete co;
                         concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
                         // Never reached
                         return ret;
                     });
                     ca(&rettask);
+                    return;
 
                 }
             }
@@ -132,8 +144,10 @@ namespace asio_helper{
 
             concurrency::task<return_type> run(){
                 coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,nullptr));
+            
                 (*coroutine_)(this);
                 return *static_cast<concurrency::task<return_type>*>(coroutine_->get());
+                
             }
         };
     }
@@ -141,6 +155,8 @@ namespace asio_helper{
     template<class R,class F>
     auto do_async(F f)->concurrency::task<R>{
         auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
+        detail::coroutine_holder::addtoglobal(ret);
+
         return ret->run();
     }
 }

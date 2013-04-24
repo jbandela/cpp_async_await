@@ -13,7 +13,7 @@ int main(){
 
     auto t3 = asio_helper::do_async<int>([t](asio_helper::async_helper<int> helper)->int{
         auto i = helper.await(t);
-        //throw std::exception("Exception");
+        throw std::exception("Exception");
         return 5+i;
 
     });
@@ -25,5 +25,8 @@ int main(){
     catch(std::exception& e){
         std::cerr << e.what();
     }
+
+    int i;
+    std::cin >> i;
 
 }

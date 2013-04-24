@@ -11,6 +11,7 @@
 
 #ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
 #define ASIO_HELPER_ENTER_EXIT ::asio_helper::detail::EnterExit asio_helper_enter_exit_var;
+#include <iostream>
 #else
 #define ASIO_HELPER_ENTER_EXIT
 #endif
