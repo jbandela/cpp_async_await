@@ -152,7 +152,7 @@ namespace asio_helper{
                 // This makes sure coroutine_ gets set;
                 (*coroutine_)(this);
                 auto f = *static_cast<func_type*>(coroutine_->get());
-                return concurrency::task<return_type>(f);
+                return f();
             }
         };
     }
