@@ -104,6 +104,7 @@ namespace asio_helper{
             typedef typename std::result_of<F(convertible_to_async_helper)>::type return_type;
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 ASIO_HELPER_ENTER_EXIT
+                ca(nullptr);
                 auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
                 pthis->coroutine_caller_ = &ca;
@@ -133,7 +134,8 @@ namespace asio_helper{
             simple_async_function_holder(F f):f_(f){}
 
             concurrency::task<return_type> run(){
-                coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,this));
+                coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,nullptr));
+                (*coroutine_)(this);
                 return *static_cast<concurrency::task<return_type>*>(coroutine_->get());
             }
         };
