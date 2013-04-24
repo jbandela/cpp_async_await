@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <type_traits>
 #include <concurrent_queue.h>
+#include <functional>
 
 #ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
 #define ASIO_HELPER_ENTER_EXIT ::asio_helper::detail::EnterExit asio_helper_enter_exit_var;
@@ -60,12 +61,14 @@ namespace asio_helper{
 
         struct convertible_to_async_helper{};
 
+
     }
 
     template<class T>
     struct async_helper{
         //typedef std::shared_ptr<detail::coroutine_holder>
         typedef detail::coroutine_holder* co_ptr;
+        typedef std::function<concurrency::task<T>> func_type;
         co_ptr co_;
         async_helper(co_ptr c)
             :co_(c)
@@ -81,7 +84,7 @@ namespace asio_helper{
             ASIO_HELPER_ENTER_EXIT
             assert(co_->coroutine_caller_);
             auto co = co_;
-            auto rettask = t.then([co](concurrency::task<R> t){
+           auto rettask = t.then([co](concurrency::task<R> t){
                 detail::ret_type ret;
                 ret.eptr_ = nullptr;
                 ret.pv_ = nullptr;
@@ -106,6 +109,8 @@ namespace asio_helper{
 
             F f_;
             typedef typename std::result_of<F(convertible_to_async_helper)>::type return_type;
+                    typedef std::function<concurrency::task<T>> func_type;
+
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 ASIO_HELPER_ENTER_EXIT;
                 // Need to call back to run so that coroutine_ gets set
@@ -125,13 +130,14 @@ namespace asio_helper{
                 }
                 catch(std::exception&){
                     auto eptr = std::current_exception();
-                    concurrency::task<return_type> rettask([eptr](){
-                        concurrency::task<return_type> ret;
+                    concurrency::task<return_type> rettask([pthis,eptr](){
+                    delete pthis;
+                       concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
                         return ret;
                     });
                     ca(&rettask);
-                }
+               }
             }
             simple_async_function_holder(F f):f_(f){}
 
@@ -147,9 +153,9 @@ namespace asio_helper{
 
     template<class R,class F>
     auto do_async(F f)->concurrency::task<R>{
-        auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
-        detail::coroutine_holder::add_to_global(ret);
-
+        //auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
+        //detail::coroutine_holder::add_to_global(ret);
+        auto ret = new detail::simple_async_function_holder<F>(f);
         return ret->run();
     }
 }
