@@ -71,8 +71,8 @@ namespace asio_helper{
         R await(concurrency::task<R> t){
             ASIO_HELPER_ENTER_EXIT
             assert(co_->coroutine_caller_);
-            auto c = co_->coroutine_;
-            auto rettask = t.then[c](concurrency::task<R> t){
+            auto c = co_->coroutine_.get();
+            auto rettask = t.then([c](concurrency::task<R> t){
                 detail::ret_type ret;
                 ret.eptr_ = nullptr;
                 ret.pv_ = nullptr;
@@ -83,9 +83,9 @@ namespace asio_helper{
                 catch(std::exception&){
                     ret.eptr_ = std::current_exception();
                 }
-                c(&ret);
-                return *static_cast<concurrency::task<T>>(c.get());
-            };
+                (*c)(&ret);
+                return *static_cast<concurrency::task<T>*>(c->get());
+            });
 
             (*co_->coroutine_caller_)(&rettask);
             auto r = static_cast<detail::ret_type*>(co_->coroutine_caller_->get())->get<R>();
@@ -109,7 +109,7 @@ namespace asio_helper{
                 pthis->coroutine_caller_ = &ca;
                 auto ptr = pthis->shared_from_this();
                 try{
-                    async_helper helper(ptr);
+                    async_helper<return_type> helper(ptr);
                     auto ret = pthis->f_(helper);
                     concurrency::task<return_type> rettask([ptr,ret]{
                         return ret;   
@@ -130,18 +130,18 @@ namespace asio_helper{
 
                 }
             }
-            simple_async_function_holder(boost::asio::io_service& io,F f):io_(io),f_(f){}
+            simple_async_function_holder(F f):f_(f){}
 
-            concurrency::task<return_type> return_type run(){
+            concurrency::task<return_type> run(){
                 coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,this));
-                return *static_cast<concurrency::task<return_type>>(coroutine_->get());
+                return *static_cast<concurrency::task<return_type>*>(coroutine_->get());
             }
         };
     }
 
-    template<class F>
-    auto do_async(F f)->concurrency::task<decltype(f(detail::convertible_to_async_helper))>{
-        auto ret = std::make_shared<detail::simple_async_function_holder<F>>(io,f);
+    template<class R,class F>
+    auto do_async(F f)->concurrency::task<R>{
+        auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
         return ret->run();
     }
 }

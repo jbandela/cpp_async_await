@@ -9,8 +9,9 @@ int main(){
         return 5;
     });
 
-    auto t3 = asio_helper::do_async([t](asio_helper::async_helper helper)->std::string{
-        return std::string("hui");
+    auto t3 = asio_helper::do_async<int>([t](asio_helper::async_helper<int> helper)->int{
+        auto i = helper.await(t);
+        return 5+i;
 
     });
     
