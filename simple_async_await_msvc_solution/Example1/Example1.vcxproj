@@ -76,10 +76,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Example1.cpp" />
+    <ClCompile Include="..\..\Example1.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\PplExample1.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\asio_helper.hpp" />
+    <ClInclude Include="..\..\ppl_helper.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
