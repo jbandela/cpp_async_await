@@ -139,7 +139,8 @@ namespace asio_helper{
                     delete pthis;
                        concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
-                        return concurrency::task<return_type>([ret](){return ret;});   
+                        return ret;
+                        //return concurrency::task<return_type>([ret](){return ret;});   
                     });
                     ca(&retfunc);
                }
