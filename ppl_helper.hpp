@@ -73,13 +73,13 @@ namespace asio_helper{
             assert(co_->coroutine_caller_);
             auto c = co_->coroutine_.get();
             auto co = co_;
-            auto rettask = t.then([co,c](concurrency::task<R> t){
+            auto rettask = t.then([co](concurrency::task<R> t){
                 detail::ret_type ret;
                 ret.eptr_ = nullptr;
                 ret.pv_ = nullptr;
                 ret.pv_ = &t;
-                (*c)(&ret);
-                return *static_cast<concurrency::task<T>*>(c->get());
+                (*co->coroutine_)(&ret);
+                return *static_cast<concurrency::task<T>*>(co->coroutine_->get());
             });
 
             (*co_->coroutine_caller_)(&rettask);
@@ -117,6 +117,7 @@ namespace asio_helper{
                 catch(std::exception&){
                     auto eptr = std::current_exception();
                     concurrency::task<return_type> rettask([&ptr,pthis,eptr]{
+
                         ptr.reset();
                         concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
