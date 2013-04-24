@@ -72,7 +72,8 @@ namespace asio_helper{
             ASIO_HELPER_ENTER_EXIT
             assert(co_->coroutine_caller_);
             auto c = co_->coroutine_.get();
-            auto rettask = t.then([c](concurrency::task<R> t){
+            auto co = co_;
+            auto rettask = t.then([co,c](concurrency::task<R> t){
                 detail::ret_type ret;
                 ret.eptr_ = nullptr;
                 ret.pv_ = nullptr;
@@ -106,14 +107,17 @@ namespace asio_helper{
                 try{
                     async_helper<return_type> helper(ptr);
                     auto ret = pthis->f_(helper);
-                    concurrency::task<return_type> rettask([pthis,ret]{
+                    helper.co_.reset();
+                    concurrency::task<return_type> rettask([&ptr,pthis,ret]{
+                        ptr.reset();
                         return ret;   
                     });
                     ca(&rettask);
                 }
                 catch(std::exception&){
                     auto eptr = std::current_exception();
-                    concurrency::task<return_type> rettask([pthis,eptr]{
+                    concurrency::task<return_type> rettask([&ptr,pthis,eptr]{
+                        ptr.reset();
                         concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
                         // Never reached
