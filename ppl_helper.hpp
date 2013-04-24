@@ -9,7 +9,6 @@
 #include <utility>
 #include <assert.h>
 #include <type_traits>
-#include <concurrent_vector.h>
 #include <concurrent_queue.h>
 
 #ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
