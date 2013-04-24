@@ -68,7 +68,7 @@ namespace asio_helper{
     struct async_helper{
         //typedef std::shared_ptr<detail::coroutine_holder>
         typedef detail::coroutine_holder* co_ptr;
-        typedef std::function<concurrency::task<T>> func_type;
+        typedef std::function<concurrency::task<T>()> func_type;
         co_ptr co_;
         async_helper(co_ptr c)
             :co_(c)
@@ -84,17 +84,21 @@ namespace asio_helper{
             ASIO_HELPER_ENTER_EXIT
             assert(co_->coroutine_caller_);
             auto co = co_;
-           auto rettask = t.then([co](concurrency::task<R> t){
-                detail::ret_type ret;
-                ret.eptr_ = nullptr;
-                ret.pv_ = nullptr;
-                ret.pv_ = &t;
-                (*co->coroutine_)(&ret);
-                auto r = *static_cast<concurrency::task<T>*>(co->coroutine_->get());
-                return r;
+
+            func_type retfunc([co,t](){
+                return t.then([co](concurrency::task<R> et)->concurrency::task<T>{
+                    detail::ret_type ret;
+                    ret.eptr_ = nullptr;
+                    ret.pv_ = nullptr;
+                    ret.pv_ = &et;
+                    (*co->coroutine_)(&ret);
+                    auto f = *static_cast<func_type*>(co->coroutine_->get());
+                    return f();
+                    //return concurrency::task<T>(f);
+                });
             });
 
-            (*co_->coroutine_caller_)(&rettask);
+            (*co_->coroutine_caller_)(&retfunc);
             auto r = static_cast<detail::ret_type*>(co_->coroutine_caller_->get())->get<concurrency::task<R>>().get();
             return r;
         }
@@ -109,7 +113,7 @@ namespace asio_helper{
 
             F f_;
             typedef typename std::result_of<F(convertible_to_async_helper)>::type return_type;
-                    typedef std::function<concurrency::task<T>> func_type;
+                    typedef std::function<concurrency::task<return_type>()> func_type;
 
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 ASIO_HELPER_ENTER_EXIT;
@@ -123,20 +127,21 @@ namespace asio_helper{
                     ASIO_HELPER_ENTER_EXIT;
                     async_helper<return_type> helper(pthis);
                     auto ret = pthis->f_(helper);
-                    concurrency::task<return_type> rettask([pthis,ret](){
-                        return ret;   
+                    func_type retfunc([pthis,ret](){
+                        delete pthis;
+                        return concurrency::task<return_type>([ret](){return ret;});   
                     });
-                    ca(&rettask);
+                    ca(&retfunc);
                 }
                 catch(std::exception&){
                     auto eptr = std::current_exception();
-                    concurrency::task<return_type> rettask([pthis,eptr](){
+                    func_type retfunc([pthis,eptr](){
                     delete pthis;
                        concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
-                        return ret;
+                        return concurrency::task<return_type>([ret](){return ret;});   
                     });
-                    ca(&rettask);
+                    ca(&retfunc);
                }
             }
             simple_async_function_holder(F f):f_(f){}
@@ -145,8 +150,8 @@ namespace asio_helper{
                 coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,nullptr));
                 // This makes sure coroutine_ gets set;
                 (*coroutine_)(this);
-                return *static_cast<concurrency::task<return_type>*>(coroutine_->get());
-                
+                auto f = *static_cast<func_type*>(coroutine_->get());
+                return concurrency::task<return_type>(f);
             }
         };
     }
