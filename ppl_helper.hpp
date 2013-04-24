@@ -76,19 +76,13 @@ namespace asio_helper{
                 detail::ret_type ret;
                 ret.eptr_ = nullptr;
                 ret.pv_ = nullptr;
-                try{
-                    auto v = t.get();
-                    ret.pv_ = &v;
-                }
-                catch(std::exception&){
-                    ret.eptr_ = std::current_exception();
-                }
+                ret.pv_ = &t;
                 (*c)(&ret);
                 return *static_cast<concurrency::task<T>*>(c->get());
             });
 
             (*co_->coroutine_caller_)(&rettask);
-            auto r = static_cast<detail::ret_type*>(co_->coroutine_caller_->get())->get<R>();
+            auto r = static_cast<detail::ret_type*>(co_->coroutine_caller_->get())->get<concurrency::task<R>>().get();
             return r;
         }
 
@@ -112,21 +106,19 @@ namespace asio_helper{
                 try{
                     async_helper<return_type> helper(ptr);
                     auto ret = pthis->f_(helper);
-                    concurrency::task<return_type> rettask([ptr,ret]{
+                    concurrency::task<return_type> rettask([pthis,ret]{
                         return ret;   
                     });
-                    ptr.reset();
                     ca(&rettask);
                 }
                 catch(std::exception&){
                     auto eptr = std::current_exception();
-                    concurrency::task<return_type> rettask([ptr,eptr]{
+                    concurrency::task<return_type> rettask([pthis,eptr]{
                         concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
                         // Never reached
                         return ret;
                     });
-                    ptr.reset();
                     ca(&rettask);
 
                 }
