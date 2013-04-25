@@ -235,9 +235,10 @@ namespace asio_helper{
 
     class async_helper{
         std::shared_ptr<detail::coroutine_holder> co_;
+        boost::asio::strand* pstrand_;
     public:
-        async_helper(std::shared_ptr<detail::coroutine_holder> c)
-            :co_(c)
+        async_helper(std::shared_ptr<detail::coroutine_holder> c,boost::asio::strand* ps)
+            :co_(c),pstrand_(ps)
         {
 
         }
@@ -256,15 +257,15 @@ namespace asio_helper{
         }
 
         template<class F>
-        typename F::return_type await(detail::callback<F>&){
+        typename F::return_type await(boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>>&){
             return await<typename F::return_type>();
 
         }
 
         template<class F>
-        detail::callback<F> make_callback(F f){
+       boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>> make_callback(F f){
             detail::callback<F> ret(co_,f);
-            return ret;
+            return pstrand_->wrap(ret);
         }
 
     };
@@ -274,6 +275,7 @@ namespace asio_helper{
 
             F f_;
             boost::asio::io_service& io_;
+            boost::asio::strand strand_;
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 ASIO_HELPER_ENTER_EXIT
                 auto p = ca.get();
@@ -281,7 +283,7 @@ namespace asio_helper{
                 pthis->coroutine_caller_ = &ca;
                 auto ptr = pthis->shared_from_this();
                 try{
-                    async_helper helper(ptr);
+                    async_helper helper(ptr,&pthis->strand_);
                     pthis->f_(helper);
                 }
                 catch(std::exception&){
@@ -291,7 +293,7 @@ namespace asio_helper{
                         std::rethrow_exception(eptr);});
                 }
             }
-            simple_async_function_holder(boost::asio::io_service& io,F f):io_(io),f_(f){}
+            simple_async_function_holder(boost::asio::io_service& io,F f):io_(io),f_(f),strand_(io){}
 
             void run(){
                 coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,this));

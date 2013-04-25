@@ -50,7 +50,7 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         tcp::resolver::iterator endpoint_iterator;
         boost::system::error_code ec;
         resolver_.async_resolve(query,resolve_cb);
-        std::tie(ec,endpoint_iterator) =  helper.await<>(resolve_cb);
+        std::tie(ec,endpoint_iterator) =  helper.await(resolve_cb);
         if(ec) {throw boost::system::system_error(ec);}
 
         // Do async connect
