@@ -37,7 +37,7 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
                 typedef boost::coroutines::coroutine<void*(void*)> co_type;
             std::unique_ptr<co_type> coroutine_;
             co_type::caller_type* coroutine_caller_;
-            coroutine_holder():coroutine_(nullptr),coroutine_caller_(nullptr){}
+            coroutine_holder():coroutine_(),coroutine_caller_(nullptr){}
 
         };
 
@@ -103,7 +103,7 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 
             F f_;
             typedef typename std::result_of<F(convertible_to_async_helper)>::type return_type;
-            typedef typename typename detail::task_type<return_type>::type task_t;
+            typedef typename detail::task_type<return_type>::type task_t;
             typedef std::function<task_t()> func_type;
 
             template<class T>
