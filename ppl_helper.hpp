@@ -9,7 +9,6 @@
 #include <utility>
 #include <assert.h>
 #include <type_traits>
-#include <concurrent_queue.h>
 #include <functional>
 
 #ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
@@ -37,12 +36,6 @@ namespace asio_helper{
             std::unique_ptr<co_type> coroutine_;
             co_type::caller_type* coroutine_caller_;
             coroutine_holder():coroutine_(nullptr),coroutine_caller_(nullptr){}
-
-            static void add_to_global(std::shared_ptr<coroutine_holder> ptr){
-                static concurrency::concurrent_queue<std::shared_ptr<coroutine_holder>> q_;
-                q_.push(ptr);
-
-            }
 
         };
 
@@ -94,13 +87,11 @@ namespace asio_helper{
                     (*co->coroutine_)(&ret);
                     auto f = *static_cast<func_type*>(co->coroutine_->get());
                     return f();
-                    //return concurrency::task<T>(f);
                 });
             });
 
             (*co_->coroutine_caller_)(&retfunc);
-            auto r = static_cast<detail::ret_type*>(co_->coroutine_caller_->get())->get<concurrency::task<R>>().get();
-            return r;
+            return static_cast<detail::ret_type*>(co_->coroutine_caller_->get())->get<concurrency::task<R>>().get();
         }
 
 

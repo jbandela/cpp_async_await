@@ -25,7 +25,7 @@ int main(){
     catch(std::exception& e){
         std::cerr << e.what();
     }
-
+    return 0;
     int i;
     std::cin >> i;
 
