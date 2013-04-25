@@ -109,14 +109,14 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
             template<class T>
             struct ret_holder{
                 T value_;
-                template<class F>
-                ret_holder(F& f,async_helper<return_type> h):value_(f(h)){}
+                template<class FT>
+                ret_holder(FT& f,async_helper<return_type> h):value_(f(h)){}
                 const T& get()const{return value_;}
             };
             template<>
             struct ret_holder<void>{
-                template<class F>
-                ret_holder(F& f,async_helper<return_type> h){
+                template<class FT>
+                ret_holder(FT& f,async_helper<return_type> h){
                     f(h);
                 }
                 void get()const{}
