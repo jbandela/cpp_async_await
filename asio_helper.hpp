@@ -34,7 +34,11 @@ namespace asio_helper{
                 typedef boost::coroutines::coroutine<void*(void*)> co_type;
             std::unique_ptr<co_type> coroutine_;
             co_type::caller_type* coroutine_caller_;
-            coroutine_holder():coroutine_(nullptr),coroutine_caller_(nullptr){}
+                        boost::asio::io_service& io_;
+            boost::asio::strand strand_;
+
+            coroutine_holder(boost::asio::io_service& io):coroutine_(nullptr),coroutine_caller_(nullptr),
+            io_(io),strand_(io){}
 
         };
 
@@ -235,10 +239,9 @@ namespace asio_helper{
 
     class async_helper{
         std::shared_ptr<detail::coroutine_holder> co_;
-        boost::asio::strand* pstrand_;
     public:
-        async_helper(std::shared_ptr<detail::coroutine_holder> c,boost::asio::strand* ps)
-            :co_(c),pstrand_(ps)
+        async_helper(std::shared_ptr<detail::coroutine_holder> c)
+            :co_(c)
         {
 
         }
@@ -265,7 +268,7 @@ namespace asio_helper{
         template<class F>
        boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>> make_callback(F f){
             detail::callback<F> ret(co_,f);
-            return pstrand_->wrap(ret);
+            return co_->strand_.wrap(ret);
         }
 
     };
@@ -274,8 +277,6 @@ namespace asio_helper{
         struct simple_async_function_holder:public coroutine_holder{
 
             F f_;
-            boost::asio::io_service& io_;
-            boost::asio::strand strand_;
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 ASIO_HELPER_ENTER_EXIT
                 auto p = ca.get();
@@ -283,7 +284,7 @@ namespace asio_helper{
                 pthis->coroutine_caller_ = &ca;
                 auto ptr = pthis->shared_from_this();
                 try{
-                    async_helper helper(ptr,&pthis->strand_);
+                    async_helper helper(ptr);
                     pthis->f_(helper);
                 }
                 catch(std::exception&){
@@ -293,7 +294,7 @@ namespace asio_helper{
                         std::rethrow_exception(eptr);});
                 }
             }
-            simple_async_function_holder(boost::asio::io_service& io,F f):io_(io),f_(f),strand_(io){}
+            simple_async_function_holder(boost::asio::io_service& io,F f):coroutine_holder(io),f_(f){}
 
             void run(){
                 coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,this));
