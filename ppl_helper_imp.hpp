@@ -97,8 +97,7 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 
     };
     namespace detail{
-        template<class F>
-        class simple_async_function_holder:public coroutine_holder{
+
             template<class T>
             struct ret_holder{
                 T value_;
@@ -114,6 +113,10 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
                 }
                 void get()const{}
             };   
+
+        template<class F>
+        class simple_async_function_holder:public coroutine_holder{
+
 
             F f_;
             typedef typename std::result_of<F(convertible_to_async_helper)>::type return_type;
