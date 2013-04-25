@@ -113,25 +113,25 @@ namespace asio_helper{
 
                 auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
+                auto sptr = pthis->shared_from_this();
                 pthis->coroutine_caller_ = &ca;
                 try{
                     ASIO_HELPER_ENTER_EXIT;
                     async_helper<return_type> helper(pthis);
                     auto ret = pthis->f_(helper);
-                    func_type retfunc([pthis,ret](){
-                        delete pthis;
+                    func_type retfunc([&sptr,ret](){
+                        sptr.reset();
                         return concurrency::task<return_type>([ret](){return ret;});   
                     });
                     ca(&retfunc);
                 }
                 catch(std::exception&){
                     auto eptr = std::current_exception();
-                    func_type retfunc([pthis,eptr](){
-                    delete pthis;
+                    func_type retfunc([&sptr,eptr](){
+                       sptr.reset();
                        concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
                         return ret;
-                        //return concurrency::task<return_type>([ret](){return ret;});   
                     });
                     ca(&retfunc);
                }
@@ -150,9 +150,8 @@ namespace asio_helper{
 
     template<class R,class F>
     auto do_async(F f)->concurrency::task<R>{
-        //auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
-        //detail::coroutine_holder::add_to_global(ret);
-        auto ret = new detail::simple_async_function_holder<F>(f);
+        auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
+       // auto ret = new detail::simple_async_function_holder<F>(f);
         return ret->run();
     }
 }

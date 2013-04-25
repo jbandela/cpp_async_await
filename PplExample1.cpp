@@ -12,12 +12,18 @@ int main(){
     });
 
     auto t3 = asio_helper::do_async<int>([t](asio_helper::async_helper<int> helper)->int{
-        auto i = helper.await(t);
-        throw std::exception("Exception");
-        return 5+i;
+
+        auto sum = 0;
+        for(int i = 0; i < 5; ++i){
+            sum+= helper.await(t);
+            std::cerr << "Iteration " << i << "\n";
+            if(i==3)throw std::exception("Exception");
+
+        }
+        return sum;
 
     });
-    
+    std::cerr << "Called do_async\n";
 
     try{
     std::cout << t3.get();
