@@ -44,11 +44,11 @@ namespace asio_helper{
         };
 
         template<class F>
-        struct callback{
+        class callback{
 
             F f_;
             std::shared_ptr<coroutine_holder> co_;
-
+        public:
             callback(std::shared_ptr<coroutine_holder> c,F f):f_(f),co_(c){}
 
             void operator()(){
@@ -233,9 +233,9 @@ namespace asio_helper{
         };
     }
 
-    struct async_helper{
+    class async_helper{
         std::shared_ptr<detail::coroutine_holder> co_;
-
+    public:
         async_helper(std::shared_ptr<detail::coroutine_holder> c)
             :co_(c)
         {
