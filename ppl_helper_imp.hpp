@@ -99,28 +99,28 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
     namespace detail{
         template<class F>
         class simple_async_function_holder:public coroutine_holder{
-
+            template<class T>
+            struct ret_holder{
+                T value_;
+                template<class FT>
+                ret_holder(FT& f,async_helper<T> h):value_(f(h)){}
+                const T& get()const{return value_;}
+            };
+            template<>
+            struct ret_holder<void>{
+                template<class FT>
+                ret_holder(FT& f,async_helper<void> h){
+                    f(h);
+                }
+                void get()const{}
+            };   
 
             F f_;
             typedef typename std::result_of<F(convertible_to_async_helper)>::type return_type;
             typedef typename detail::task_type<return_type>::type task_t;
             typedef std::function<task_t()> func_type;
 
-            template<class T>
-            struct ret_holder{
-                T value_;
-                template<class FT>
-                ret_holder(FT& f,async_helper<return_type> h):value_(f(h)){}
-                const T& get()const{return value_;}
-            };
-            template<>
-            struct ret_holder<void>{
-                template<class FT>
-                ret_holder(FT& f,async_helper<return_type> h){
-                    f(h);
-                }
-                void get()const{}
-            };   
+
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 PPL_HELPER_ENTER_EXIT;;
                 // Need to call back to run so that coroutine_ gets set
