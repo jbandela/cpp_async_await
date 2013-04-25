@@ -11,7 +11,7 @@ int main(){
         return 5;
     });
 
-    auto t3 = asio_helper::do_async<int>([t](asio_helper::async_helper<int> helper)->int{
+    auto t3 = ppl_helper::do_async<int>([t](ppl_helper::async_helper<int> helper)->int{
 
         auto sum = 0;
         for(int i = 0; i < 5; ++i){

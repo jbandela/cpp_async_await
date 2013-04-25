@@ -1,6 +1,6 @@
 #pragma once
-#ifndef ASIO_HELPER_ASIO_HELPER_INCLUDED_04_23_2013
-#define ASIO_HELPER_ASIO_HELPER_INCLUDED_04_23_2013
+#ifndef ASYNC_HELPER_PPL_HELPER_INCLUDED_04_24_2013
+#define ASYNC_HELPER_PPL_HELPER_INCLUDED_04_24_2013
 
 #include <ppltasks.h>
 #include <boost/coroutine/all.hpp>
@@ -11,15 +11,15 @@
 #include <type_traits>
 #include <functional>
 
-#ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
-#define ASIO_HELPER_ENTER_EXIT ::asio_helper::detail::EnterExit asio_helper_enter_exit_var;
+#ifdef PPL_HELPER_OUTPUT_ENTER_EXIT
+#define PPL_HELPER_OUTPUT_ENTER_EXIT ::asio_helper::detail::EnterExit asio_helper_enter_exit_var;
 #else
-#define ASIO_HELPER_ENTER_EXIT
+#define PPL_HELPER_OUTPUT_ENTER_EXIT
 #endif
 
-namespace asio_helper{
+namespace ppl_helper{
     namespace detail{
-#ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
+#ifdef PPL_HELPER_OUTPUT_ENTER_EXIT
         // Used for debugging to make sure all functions are exiting correctly
         struct EnterExit{
             EnterExit():n_(++number()){ std::cerr << "==" << n_ << " Entering\n";}
@@ -31,7 +31,7 @@ namespace asio_helper{
         };
 #endif
         struct coroutine_holder:std::enable_shared_from_this<coroutine_holder>{
-            ASIO_HELPER_ENTER_EXIT
+            PPL_HELPER_OUTPUT_ENTER_EXIT
                 typedef boost::coroutines::coroutine<void*(void*)> co_type;
             std::unique_ptr<co_type> coroutine_;
             co_type::caller_type* coroutine_caller_;
@@ -74,10 +74,9 @@ namespace asio_helper{
 
         template<class R>
         R await(concurrency::task<R> t){
-            ASIO_HELPER_ENTER_EXIT
+            PPL_HELPER_OUTPUT_ENTER_EXIT
             assert(co_->coroutine_caller_);
             auto co = co_;
-
             func_type retfunc([co,t](){
                 return t.then([co](concurrency::task<R> et)->concurrency::task<T>{
                     detail::ret_type ret;
@@ -94,9 +93,6 @@ namespace asio_helper{
             return static_cast<detail::ret_type*>(co_->coroutine_caller_->get())->get<concurrency::task<R>>().get();
         }
 
-
-
-
     };
     namespace detail{
         template<class F>
@@ -107,7 +103,7 @@ namespace asio_helper{
                     typedef std::function<concurrency::task<return_type>()> func_type;
 
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
-                ASIO_HELPER_ENTER_EXIT;
+                PPL_HELPER_OUTPUT_ENTER_EXIT;
                 // Need to call back to run so that coroutine_ gets set
                 ca(nullptr);
 
@@ -116,7 +112,7 @@ namespace asio_helper{
                 auto sptr = pthis->shared_from_this();
                 pthis->coroutine_caller_ = &ca;
                 try{
-                    ASIO_HELPER_ENTER_EXIT;
+                    PPL_HELPER_OUTPUT_ENTER_EXIT;
                     async_helper<return_type> helper(pthis);
                     auto ret = pthis->f_(helper);
                     func_type retfunc([&sptr,ret](){
@@ -156,5 +152,5 @@ namespace asio_helper{
     }
 }
 
-#undef ASIO_HELPER_ENTER_EXIT
+#undef PPL_HELPER_OUTPUT_ENTER_EXIT
 #endif
