@@ -23,10 +23,22 @@ int main(){
         return sum;
 
     });
+        auto t4 = ppl_helper::do_async<void>([t](ppl_helper::async_helper<void> helper){
+
+        auto sum = 0;
+        for(int i = 0; i < 5; ++i){
+            sum+= helper.await(t);
+            std::cerr << "Void Iteration " << i << "\n";
+
+        }
+        //return sum;
+
+    });
     std::cerr << "Called do_async\n";
 
     try{
-    std::cout << t3.get();
+        t4.get();
+        std::cout << t3.get();
     }
     catch(std::exception& e){
         std::cerr << e.what();

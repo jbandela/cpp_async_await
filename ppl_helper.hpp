@@ -58,11 +58,11 @@ namespace ppl_helper{
     }
 
     template<class T>
-    struct async_helper{
-        //typedef std::shared_ptr<detail::coroutine_holder>
+    class async_helper{
         typedef detail::coroutine_holder* co_ptr;
         typedef std::function<concurrency::task<T>()> func_type;
         co_ptr co_;
+    public:
         async_helper(co_ptr c)
             :co_(c)
         {
@@ -75,7 +75,7 @@ namespace ppl_helper{
         template<class R>
         R await(concurrency::task<R> t){
             PPL_HELPER_OUTPUT_ENTER_EXIT
-            assert(co_->coroutine_caller_);
+                assert(co_->coroutine_caller_);
             auto co = co_;
             func_type retfunc([co,t](){
                 return t.then([co](concurrency::task<R> et)->concurrency::task<T>{
@@ -96,12 +96,28 @@ namespace ppl_helper{
     };
     namespace detail{
         template<class F>
-        struct simple_async_function_holder:public coroutine_holder{
+        class simple_async_function_holder:public coroutine_holder{
+
 
             F f_;
             typedef typename std::result_of<F(convertible_to_async_helper)>::type return_type;
-                    typedef std::function<concurrency::task<return_type>()> func_type;
+            typedef std::function<concurrency::task<return_type>()> func_type;
 
+            template<class T>
+            struct ret_holder{
+                T value_;
+                template<class F>
+                ret_holder(F& f,async_helper<return_type> h):value_(f(h)){}
+                const T& get()const{return value_;}
+            };
+            template<>
+            struct ret_holder<void>{
+                template<class F>
+                ret_holder(F& f,async_helper<return_type> h){
+                    f(h);
+                }
+                void get()const{}
+            };   
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 PPL_HELPER_OUTPUT_ENTER_EXIT;
                 // Need to call back to run so that coroutine_ gets set
@@ -114,24 +130,25 @@ namespace ppl_helper{
                 try{
                     PPL_HELPER_OUTPUT_ENTER_EXIT;
                     async_helper<return_type> helper(pthis);
-                    auto ret = pthis->f_(helper);
+                    ret_holder<return_type> ret(pthis->f_,helper);
                     func_type retfunc([&sptr,ret](){
                         sptr.reset();
-                        return concurrency::task<return_type>([ret](){return ret;});   
+                        return concurrency::task<return_type>([ret](){return ret.get();});   
                     });
                     ca(&retfunc);
                 }
                 catch(std::exception&){
                     auto eptr = std::current_exception();
                     func_type retfunc([&sptr,eptr](){
-                       sptr.reset();
-                       concurrency::task<return_type> ret;
+                        sptr.reset();
+                        concurrency::task<return_type> ret;
                         std::rethrow_exception(eptr);
                         return ret;
                     });
                     ca(&retfunc);
-               }
+                }
             }
+        public:
             simple_async_function_holder(F f):f_(f){}
 
             concurrency::task<return_type> run(){
@@ -147,7 +164,6 @@ namespace ppl_helper{
     template<class R,class F>
     auto do_async(F f)->concurrency::task<R>{
         auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
-       // auto ret = new detail::simple_async_function_holder<F>(f);
         return ret->run();
     }
 }
