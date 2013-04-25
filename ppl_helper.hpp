@@ -12,9 +12,9 @@
 #include <functional>
 
 #ifdef PPL_HELPER_OUTPUT_ENTER_EXIT
-#define PPL_HELPER_OUTPUT_ENTER_EXIT ::asio_helper::detail::EnterExit asio_helper_enter_exit_var;
+#define PPL_HELPER_ENTER_EXIT ::ppl_helper::detail::EnterExit ppl_helper_enter_exit_var;
 #else
-#define PPL_HELPER_OUTPUT_ENTER_EXIT
+#define PPL_HELPER_ENTER_EXIT
 #endif
 
 namespace ppl_helper{
@@ -30,8 +30,11 @@ namespace ppl_helper{
 
         };
 #endif
+#undef PPL_HELPER_OUTPUT_ENTER_EXIT
+
+
         struct coroutine_holder:std::enable_shared_from_this<coroutine_holder>{
-            PPL_HELPER_OUTPUT_ENTER_EXIT
+            PPL_HELPER_ENTER_EXIT;
                 typedef boost::coroutines::coroutine<void*(void*)> co_type;
             std::unique_ptr<co_type> coroutine_;
             co_type::caller_type* coroutine_caller_;
@@ -74,7 +77,7 @@ namespace ppl_helper{
 
         template<class R>
         R await(concurrency::task<R> t){
-            PPL_HELPER_OUTPUT_ENTER_EXIT
+            PPL_HELPER_ENTER_EXIT;
                 assert(co_->coroutine_caller_);
             auto co = co_;
             func_type retfunc([co,t](){
@@ -119,7 +122,7 @@ namespace ppl_helper{
                 void get()const{}
             };   
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
-                PPL_HELPER_OUTPUT_ENTER_EXIT;
+                PPL_HELPER_ENTER_EXIT;;
                 // Need to call back to run so that coroutine_ gets set
                 ca(nullptr);
 
@@ -128,7 +131,7 @@ namespace ppl_helper{
                 auto sptr = pthis->shared_from_this();
                 pthis->coroutine_caller_ = &ca;
                 try{
-                    PPL_HELPER_OUTPUT_ENTER_EXIT;
+                    PPL_HELPER_ENTER_EXIT;
                     async_helper<return_type> helper(pthis);
                     ret_holder<return_type> ret(pthis->f_,helper);
                     func_type retfunc([&sptr,ret](){
@@ -159,14 +162,22 @@ namespace ppl_helper{
                 return f();
             }
         };
+
+        template<class F>
+        struct return_helper{};
+
+        template<class R>
+        struct return_helper<R(async_helper<R>)>{
+            typedef R type;
+        };
     }
 
-    template<class R,class F>
-    auto do_async(F f)->concurrency::task<R>{
+    template<class F>
+    concurrency::task<typename std::result_of<F(detail::convertible_to_async_helper)>::type> do_async(F f){
         auto ret = std::make_shared<detail::simple_async_function_holder<F>>(f);
         return ret->run();
     }
 }
 
-#undef PPL_HELPER_OUTPUT_ENTER_EXIT
+
 #endif
