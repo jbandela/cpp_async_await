@@ -85,6 +85,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\asio_helper.hpp" />
     <ClInclude Include="..\..\ppl_helper.hpp" />
+    <ClInclude Include="..\..\ppl_helper_imp.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

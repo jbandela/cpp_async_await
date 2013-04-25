@@ -23,6 +23,9 @@
     <ClInclude Include="..\..\asio_helper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ppl_helper_imp.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\ppl_helper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
