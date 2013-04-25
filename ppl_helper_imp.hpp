@@ -98,21 +98,21 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
     };
     namespace detail{
 
-            template<class T>
-            struct ret_holder{
-                T value_;
-                template<class FT>
-                ret_holder(FT& f,async_helper<T> h):value_(f(h)){}
-                const T& get()const{return value_;}
-            };
-            template<>
-            struct ret_holder<void>{
-                template<class FT>
-                ret_holder(FT& f,async_helper<void> h){
-                    f(h);
-                }
-                void get()const{}
-            };   
+        template<class T>
+        struct ret_holder{
+            T value_;
+            template<class FT>
+            ret_holder(FT& f,async_helper<T> h):value_(f(h)){}
+            const T& get()const{return value_;}
+        };
+        template<>
+        struct ret_holder<void>{
+            template<class FT>
+            ret_holder(FT& f,async_helper<void> h){
+                f(h);
+            }
+            void get()const{}
+        };   
 
         template<class F>
         class simple_async_function_holder:public coroutine_holder{
