@@ -1,4 +1,3 @@
-#define ASIO_HELPER_OUTPUT_ENTER_EXIT
 #include "asio_helper.hpp"
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -21,7 +20,10 @@ int main()
             for(int i = 0; i < 5; i++){
 
                 // Call the async function with the results of make_callback
-                auto ec = helper.await<asio_helper::handlers::wait_handler>([&](asio_helper::handlers::wait_handler::callback_type cb){t.async_wait(cb);});
+                auto ec = helper.await<asio_helper::handlers::wait_handler>(
+                    [&](asio_helper::handlers::wait_handler::callback_type cb){
+                        t.async_wait(cb);
+                });
 
                 // Print a message about the timer
                 std::cout << "Timer went off " << (i+1) << " times with ec = " << ec.message() << std::endl;
