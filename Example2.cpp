@@ -60,8 +60,8 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         if(ec) {throw boost::system::system_error(ec);}
 
         // Do async connect
-        std::tie(ec,std::ignore) = helper.await<composedconnect_handler>(
-            [&](composedconnect_handler::callback_type cb){
+        std::tie(ec,std::ignore) = helper.await<composed_connect_handler>(
+            [&](composed_connect_handler::callback_type cb){
                 boost::asio::async_connect(socket_,endpoint_iterator,cb);    
         });
         if(ec){throw boost::system::system_error(ec);}
