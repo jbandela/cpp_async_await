@@ -153,88 +153,103 @@ namespace asio_helper{
                 (*co_->coroutine_)(&r);
             }
 
-            template<class T0,class T1,class T2,class T3,class T4,class T5>
-            void operator()(T0&& t0,T1&& t1,T2&& t2,T3&& t3,T4&& t4,T5&& t5){
-                ASIO_HELPER_ENTER_EXIT
-                ret_type r;
-                try{
-                    auto ret = f_(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),std::forward<T3>(t3)
-                        ,std::forward<T4>(t4),std::forward<T5>(t5));
-                    r.eptr_ = nullptr;
-                    r.pv_ = &ret;
-                }
-                catch(...){
-                    r.eptr_ = std::current_exception();
-                    r.pv_ = nullptr;
-                }
-                (*co_->coroutine_)(&r);
-            }
-
         };
+
+        
     }
 
     namespace handlers{
-        struct read_handler
-        {
-            typedef  std::pair<boost::system::error_code,std::size_t> return_type;
-            std::pair<boost::system::error_code,std::size_t> operator()(
-                const boost::system::error_code& ec,
-                std::size_t bytes_transferred)
-            {
-                return std::make_pair(ec,bytes_transferred);
-            }
-        };       
+
+        namespace detail{
+            struct nill_t{};
+
+        }
+        
+
+        template<class T0 = detail::nill_t, class T1 = detail::nill_t, class T2 = detail::nill_t,
+             class T3 = detail::nill_t, class T4 = detail::nill_t,class T5 = detail::nill_t>
+             struct handler{};
+
+             template<>
+             struct handler<>{
+                 typedef boost::asio::detail::wrapped_handler<boost::asio::strand, asio_helper::detail::callback<handler>> 
+                     callback_type;
+                 typedef int return_type;
+
+                 return_type operator ()(){
+                     return 0;
+                 }
+             };          
+             template<class T0>
+             struct handler<T0>{
+                 typedef T0 return_type;
+                 typedef boost::asio::detail::wrapped_handler<boost::asio::strand, asio_helper::detail::callback<handler>> 
+                     callback_type;
+                 return_type operator ()(T0 t0){
+                     return t0;
+                 }
+             };   
+             template<class T0,class T1>
+             struct handler<T0,T1>{
+                 typedef std::pair<T0,T1> return_type;
+                 typedef boost::asio::detail::wrapped_handler<boost::asio::strand, asio_helper::detail::callback<handler>> 
+                     callback_type;
+                 return_type operator ()(T0 t0,T1 t1){
+                     return std::make_pair(std::move(t0),std::move(t1));
+                 }
+             };
+             template<class T0,class T1,class T2>
+             struct handler<T0,T1,T2>{
+                 typedef std::tuple<T0,T1,T2> return_type;
+                 typedef boost::asio::detail::wrapped_handler<boost::asio::strand, asio_helper::detail::callback<handler>> 
+                     callback_type;
+                 return_type operator ()(T0 t0,T1 t1,T2 t2){
+                     return std::make_tuple(std::move(t0),std::move(t1),std::move(t2));
+                 }
+             };
+
+             template<class T0,class T1,class T2,class T3>
+             struct handler<T0,T1,T2,T3>{
+                 typedef std::tuple<T0,T1,T2,T3> return_type;
+                 typedef boost::asio::detail::wrapped_handler<boost::asio::strand, asio_helper::detail::callback<handler>> 
+                     callback_type;
+                 return_type operator ()(T0 t0,T1 t1,T2 t2,T3 t3){
+                     return std::make_tuple(std::move(t0),std::move(t1),std::move(t2),std::move(t3));
+                 }
+             };
+
+             template<class T0,class T1,class T2,class T3,class T4>
+             struct handler<T0,T1,T2,T3,T4>{
+                 typedef std::tuple<T0,T1,T2,T3,T4> return_type;
+                 typedef boost::asio::detail::wrapped_handler<boost::asio::strand, asio_helper::detail::callback<handler>> 
+                     callback_type;
+                 return_type operator ()(T0 t0,T1 t1,T2 t2,T3 t3,T4 t4){
+                     return std::make_tuple(std::move(t0),std::move(t1),std::move(t2),std::move(t3),std::move(t4));
+                 }
+             };
+
+             typedef handler<boost::system::error_code,std::size_t> read_handler;
 
         typedef read_handler write_handler;
 
-        struct completion_handler
-        {
-            typedef int return_type;
+        typedef handler<> completion_handler;
 
-            int operator()()
-            {
-                return 0;
-            }
-        };
+        typedef handler<boost::system::error_code> accept_handler;
 
-        struct accept_handler
-        {
-            typedef boost::system::error_code return_type;
-            boost::system::error_code operator()(
-                const boost::system::error_code& ec)
-            {
-                return ec;
-            }
-        };
+
 
         typedef accept_handler connect_handler;
         typedef accept_handler sslhandshake_handler;
         typedef accept_handler sslshutdown_handler;
         typedef accept_handler wait_handler;
 
-        struct composedconnect_handler
-        {
-            typedef std::pair<boost::system::error_code,boost::asio::ip::tcp::resolver::iterator> return_type;
-            std::pair<boost::system::error_code,boost::asio::ip::tcp::resolver::iterator> operator()(
-                const boost::system::error_code& ec,
-                boost::asio::ip::tcp::resolver::iterator iterator)
-            {
-                return std::make_pair(ec,iterator);
-            }
-        };
+        typedef handler<boost::system::error_code,boost::asio::ip::tcp::resolver::iterator> composedconnect_handler;
+
+
 
         typedef composedconnect_handler resolve_handler;
 
-        struct signal_handler
-        {
-            typedef std::pair<boost::system::error_code,int> return_type;
-            std::pair<boost::system::error_code,int> operator()(
-                const boost::system::error_code& ec,
-                int signal_number)
-            {
-                return std::make_pair(ec,signal_number);
-            }
-        };
+        typedef handler<boost::system::error_code,int> signal_handler;
     }
 
     class async_helper{
