@@ -126,8 +126,6 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 PPL_HELPER_ENTER_EXIT;;
-                // Need to call back to run so that coroutine_ gets set
-                ca(nullptr);
 
                 auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
@@ -158,9 +156,7 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
             simple_async_function_holder(F f):f_(f){}
 
             typename detail::task_type<return_type>::type run(){
-                coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,nullptr));
-                // This makes sure coroutine_ gets set;
-                (*coroutine_)(this);
+                coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,this));
                 auto f = *static_cast<func_type*>(coroutine_->get());
                 return f();
             }
