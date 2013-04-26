@@ -268,6 +268,12 @@ namespace asio_helper{
             return r;
         }
 
+        template<class F>
+       boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>> make_callback(F f){
+            detail::callback<F> ret(co_,f);
+            return co_->strand_.wrap(ret);
+        }   
+    
     public:
         async_helper(std::shared_ptr<detail::coroutine_holder> c)
             :co_(c)
@@ -276,17 +282,15 @@ namespace asio_helper{
         }
 
 
-        template<class F>
-        typename F::return_type await(boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>>&){
-            return await<typename F::return_type>();
+        template<class Handler,class F>
+        typename Handler::return_type await(F f){
+            typename Handler::callback_type cb = make_callback(Handler());
+            f(cb);
+            return await<typename Handler::return_type>();
 
         }
 
-        template<class F>
-       boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>> make_callback(F f){
-            detail::callback<F> ret(co_,f);
-            return co_->strand_.wrap(ret);
-        }
+
 
     };
     namespace detail{
