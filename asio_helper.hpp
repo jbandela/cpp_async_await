@@ -291,9 +291,9 @@ namespace asio_helper{
                 }
                 catch(std::exception&){
                     auto eptr = std::current_exception();
-                    pthis->io_.post([eptr](){
+                    pthis->io_.post(pthis->strand_.wrap([eptr](){
                         ASIO_HELPER_ENTER_EXIT 
-                        std::rethrow_exception(eptr);});
+                        std::rethrow_exception(eptr);}));
                 }
             }
             simple_async_function_holder(boost::asio::io_service& io,F f):coroutine_holder(io),f_(f){}
@@ -307,7 +307,7 @@ namespace asio_helper{
     template<class F>
     void do_async(boost::asio::io_service& io,F f){
         auto ret = std::make_shared<detail::simple_async_function_holder<F>>(io,f);
-        ret->run();
+        io.post(ret->strand_.wrap([ret](){ret->run();}));
     }
 }
 

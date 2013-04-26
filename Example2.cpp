@@ -20,6 +20,8 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <tuple>
+#include <vector>
+#include <thread>
 
 using boost::asio::ip::tcp;
 
@@ -138,8 +140,22 @@ int main(int argc, char* argv[])
         }
 
         boost::asio::io_service io_service;
+
+        
         get_http(io_service,argv[1],argv[2]);
-        io_service.run();
+
+         // Create a pool of threads to run all of the io_services.
+        std::vector<std::shared_ptr<std::thread> > threads;
+        for (std::size_t i = 0; i < 4; ++i)
+        {
+            std::shared_ptr<std::thread> thread(new std::thread(
+                [&io_service](){io_service.run();}));
+            threads.push_back(thread);
+        } 
+
+        // Wait for all threads in the pool to exit.
+        for (std::size_t i = 0; i < threads.size(); ++i)
+            threads[i]->join();
     }
     catch (std::exception& e)
     {
