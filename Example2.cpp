@@ -23,13 +23,19 @@
 #include <vector>
 #include <thread>
 
-using boost::asio::ip::tcp;
 
 void get_http(boost::asio::io_service& io,std::string server, std::string path){
 
     using namespace asio_helper::handlers;
     // This allows us to do await
     asio_helper::do_async(io,[=,&io](asio_helper::async_helper helper){
+
+        using boost::asio::ip::tcp;
+
+        // This allows us to use the predefined handlers
+        // such as read_handler, write_handler, etc
+        using namespace asio_helper::handlers;
+
         tcp::resolver resolver_(io);
         tcp::socket socket_(io);
         boost::asio::streambuf request_;
