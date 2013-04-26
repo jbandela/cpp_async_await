@@ -34,11 +34,11 @@ namespace asio_helper{
                 typedef boost::coroutines::coroutine<void*(void*)> co_type;
             std::unique_ptr<co_type> coroutine_;
             co_type::caller_type* coroutine_caller_;
-                        boost::asio::io_service& io_;
+            boost::asio::io_service& io_;
             boost::asio::strand strand_;
 
             coroutine_holder(boost::asio::io_service& io):coroutine_(nullptr),coroutine_caller_(nullptr),
-            io_(io),strand_(io){}
+                io_(io),strand_(io){}
 
         };
 
@@ -55,128 +55,75 @@ namespace asio_helper{
         public:
             callback(std::shared_ptr<coroutine_holder> c,F f):f_(f),co_(c){}
 
-            void operator()(){
+            template<class... T>
+            void operator()(T&&... t){
                 ASIO_HELPER_ENTER_EXIT
-                ret_type r;
+                    ret_type r;
                 try{
-                    auto ret = f_();
+                    auto ret = f_(std::forward<T>(t)...);
                     r.eptr_ = nullptr;
                     r.pv_ = &ret;
                 }
-                catch(...){
-                    r.eptr_ = std::current_exception();
-                    r.pv_ = nullptr;
-                }
-
-                (*co_->coroutine_)(&r);
-            }
-
-            template<class T0>
-            void operator()(T0&& t0){
-                ASIO_HELPER_ENTER_EXIT
-                ret_type r;
-                try{
-                    auto ret = f_(std::forward<T0>(t0));
-                    r.eptr_ = nullptr;
-                    r.pv_ = &ret;
-                }
-                catch(...){
+                catch(std::exception&){
                     r.eptr_ = std::current_exception();
                     r.pv_ = nullptr;
                 }
                 (*co_->coroutine_)(&r);
-            }    
-
-            template<class T0,class T1>
-            void operator()(T0&& t0,T1&& t1){
-                ASIO_HELPER_ENTER_EXIT 
-                ret_type r;
-                try{
-                    auto ret = f_(std::forward<T0>(t0),std::forward<T1>(t1));
-                    r.eptr_ = nullptr;
-                    r.pv_ = &ret;
-                }
-                catch(...){
-                    r.eptr_ = std::current_exception();
-                    r.pv_ = nullptr;
-                }
-
-                (*co_->coroutine_)(&r);
-            }  
-
-            template<class T0,class T1,class T2>
-            void operator()(T0&& t0,T1&& t1,T2&& t2){
-                ASIO_HELPER_ENTER_EXIT
-                ret_type r;
-                try{
-                    auto ret = f_(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2));
-                    r.eptr_ = nullptr;
-                    r.pv_ = &ret;
-                }
-                catch(...){
-                    r.eptr_ = std::current_exception();
-                    r.pv_ = nullptr;
-                }
-                (*co_->coroutine_)(&r);
-            }
-
-            template<class T0,class T1,class T2,class T3>
-            void operator()(T0&& t0,T1&& t1,T2&& t2,T3&& t3){
-                ASIO_HELPER_ENTER_EXIT
-                ret_type r;
-                try{
-                    auto ret = f_(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),std::forward<T3>(t3));
-                    r.eptr_ = nullptr;
-                    r.pv_ = &ret;
-                }
-                catch(...){
-                    r.eptr_ = std::current_exception();
-                    r.pv_ = nullptr;
-                }
-                (*co_->coroutine_)(&r);
-            }
-
-            template<class T0,class T1,class T2,class T3,class T4>
-            void operator()(T0&& t0,T1&& t1,T2&& t2,T3&& t3,T4&& t4){
-                ASIO_HELPER_ENTER_EXIT
-                ret_type r;
-                try{
-                    auto ret = f_(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),std::forward<T3>(t3)
-                        ,std::forward<T4>(t4));
-                    r.eptr_ = nullptr;
-                    r.pv_ = &ret;
-                }
-                catch(...){
-                    r.eptr_ = std::current_exception();
-                    r.pv_ = nullptr;
-                }
-                (*co_->coroutine_)(&r);
-            }
-
-            template<class T0,class T1,class T2,class T3,class T4,class T5>
-            void operator()(T0&& t0,T1&& t1,T2&& t2,T3&& t3,T4&& t4,T5&& t5){
-                ASIO_HELPER_ENTER_EXIT
-                ret_type r;
-                try{
-                    auto ret = f_(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),std::forward<T3>(t3)
-                        ,std::forward<T4>(t4),std::forward<T5>(t5));
-                    r.eptr_ = nullptr;
-                    r.pv_ = &ret;
-                }
-                catch(...){
-                    r.eptr_ = std::current_exception();
-                    r.pv_ = nullptr;
-                }
-                (*co_->coroutine_)(&r);
-            }
+            }   
 
         };
+        // Get return type of function
+        // Adapted from http://stackoverflow.com/questions/13998227/determining-number-and-type-of-parameters-and-return-type-of-type-parameter-that
+        namespace detail {
+
+            template <typename T>
+            struct return_type_helper{};
+
+            // non-member functions
+            template <typename R, typename... Args>
+            struct return_type_helper<R (*)(Args...)> {
+                typedef R                   result_t;
+            };
+
+            // member functions
+            template <typename R, typename O, typename... Args>
+            struct return_type_helper<R (O::*)(Args...)> {
+                typedef R                   result_t;
+            };
+
+            // const member functions
+            template <typename R, typename O, typename... Args>
+            struct return_type_helper<R (O::*)(Args...) const> {
+                typedef R                   result_t;
+            };
+
+
+            template <typename T, typename is_ptr = typename std::is_pointer<T>::type>
+            struct callable_helper;
+
+            //! specialization for functors (and lambdas)
+            template <typename T>
+            struct callable_helper<T, std::false_type> {
+                typedef return_type_helper<decltype(&T::operator())> type;
+            };
+
+            //! specialization for function pointers
+            template <typename T>
+            struct callable_helper<T, std::true_type> {
+                typedef return_type_helper<T> type;
+            };
+        } 
+
+        template <typename T>
+        struct callable_traits {
+            typedef typename detail::callable_helper<T>::type::result_t result_t;
+        };
+
     }
 
     namespace handlers{
         struct read_handler
         {
-            typedef  std::pair<boost::system::error_code,std::size_t> return_type;
             std::pair<boost::system::error_code,std::size_t> operator()(
                 const boost::system::error_code& ec,
                 std::size_t bytes_transferred)
@@ -189,7 +136,6 @@ namespace asio_helper{
 
         struct completion_handler
         {
-            typedef int return_type;
 
             int operator()()
             {
@@ -199,7 +145,6 @@ namespace asio_helper{
 
         struct accept_handler
         {
-            typedef boost::system::error_code return_type;
             boost::system::error_code operator()(
                 const boost::system::error_code& ec)
             {
@@ -214,7 +159,6 @@ namespace asio_helper{
 
         struct composedconnect_handler
         {
-            typedef std::pair<boost::system::error_code,boost::asio::ip::tcp::resolver::iterator> return_type;
             std::pair<boost::system::error_code,boost::asio::ip::tcp::resolver::iterator> operator()(
                 const boost::system::error_code& ec,
                 boost::asio::ip::tcp::resolver::iterator iterator)
@@ -227,7 +171,6 @@ namespace asio_helper{
 
         struct signal_handler
         {
-            typedef std::pair<boost::system::error_code,int> return_type;
             std::pair<boost::system::error_code,int> operator()(
                 const boost::system::error_code& ec,
                 int signal_number)
@@ -239,17 +182,11 @@ namespace asio_helper{
 
     class async_helper{
         std::shared_ptr<detail::coroutine_holder> co_;
-    public:
-        async_helper(std::shared_ptr<detail::coroutine_holder> c)
-            :co_(c)
-        {
-
-        }
 
         template<class R>
         R await(){
             ASIO_HELPER_ENTER_EXIT
-            assert(co_->coroutine_caller_);
+                assert(co_->coroutine_caller_);
             (*co_->coroutine_caller_)(nullptr);
             auto ret = reinterpret_cast<detail::ret_type*>(co_->coroutine_caller_->get());
             if(ret->eptr_){
@@ -257,16 +194,25 @@ namespace asio_helper{
             }
             auto r = std::move( *static_cast<R*>(ret->pv_));
             return r;
+        }    
+    
+    public:
+        async_helper(std::shared_ptr<detail::coroutine_holder> c)
+            :co_(c)
+        {
+
+        }
+
+
+
+        template<class F>
+        typename detail::callable_traits<F>::result_t await(boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>>&){
+            return await<typename detail::callable_traits<F>::result_t>();
+
         }
 
         template<class F>
-        typename F::return_type await(boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>>&){
-            return await<typename F::return_type>();
-
-        }
-
-        template<class F>
-       boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>> make_callback(F f){
+        boost::asio::detail::wrapped_handler<boost::asio::strand, detail::callback<F>> make_callback(F f){
             detail::callback<F> ret(co_,f);
             return co_->strand_.wrap(ret);
         }
@@ -279,7 +225,7 @@ namespace asio_helper{
             F f_;
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 ASIO_HELPER_ENTER_EXIT
-                auto p = ca.get();
+                    auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
                 pthis->coroutine_caller_ = &ca;
                 auto ptr = pthis->shared_from_this();
@@ -291,7 +237,7 @@ namespace asio_helper{
                     auto eptr = std::current_exception();
                     pthis->io_.post([eptr](){
                         ASIO_HELPER_ENTER_EXIT 
-                        std::rethrow_exception(eptr);});
+                            std::rethrow_exception(eptr);});
                 }
             }
             simple_async_function_holder(boost::asio::io_service& io,F f):coroutine_holder(io),f_(f){}
