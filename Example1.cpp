@@ -25,9 +25,9 @@ int main()
 
                 // Print a message about the timer
                 std::cout << "Timer went off " << (i+1) << " times with ec = " << ec.message() << std::endl;
-                t.expires_from_now(boost::posix_time::seconds(1));
-                if(i==1) throw std::exception("Exception");
+
                 // Set up a new expiration for the timer
+                t.expires_from_now(boost::posix_time::seconds(1));
 
             }
 

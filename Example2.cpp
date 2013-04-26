@@ -49,11 +49,11 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         tcp::resolver::query query(server, "http");
 
         // Do async resolve
-
         tcp::resolver::iterator endpoint_iterator;
         boost::system::error_code ec;
-        std::tie(ec,endpoint_iterator) =  helper.await<resolve_handler>([&](resolve_handler::callback_type cb){
-            resolver_.async_resolve(query,cb);
+        std::tie(ec,endpoint_iterator) =  helper.await<resolve_handler>(
+            [&](resolve_handler::callback_type cb){
+                resolver_.async_resolve(query,cb);
         });
         
 
@@ -70,7 +70,6 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         if(ec){throw boost::system::system_error(ec);}
 
         // Connection was successful, send request
-
         std::tie(ec,std::ignore) = helper.await<write_handler>(
             [&](write_handler::callback_type cb){
                 boost::asio::async_write(socket_,request_,cb);
@@ -78,7 +77,6 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         if(ec){throw boost::system::system_error(ec);}
 
         // Read the response status line
-       
         std::tie(ec,std::ignore) = helper.await<read_handler>(
             [&](read_handler::callback_type cb){
                 boost::asio::async_read_until(socket_,response_,"\r\n",cb);
@@ -157,18 +155,7 @@ int main(int argc, char* argv[])
         
         get_http(io_service,argv[1],argv[2]);
 
-         // Create a pool of threads to run all of the io_services.
-        std::vector<std::shared_ptr<std::thread> > threads;
-        for (std::size_t i = 0; i < 4; ++i)
-        {
-            std::shared_ptr<std::thread> thread(new std::thread(
-                [&io_service](){io_service.run();}));
-            threads.push_back(thread);
-        } 
-
-        // Wait for all threads in the pool to exit.
-        for (std::size_t i = 0; i < threads.size(); ++i)
-            threads[i]->join();
+        io_service.run();
     }
     catch (std::exception& e)
     {

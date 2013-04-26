@@ -53,7 +53,7 @@ namespace asio_helper{
             F f_;
             std::shared_ptr<coroutine_holder> co_;
         public:
-            callback(std::shared_ptr<coroutine_holder> c,F f):f_(f),co_(c){}
+            callback(coroutine_holder* c,F f):f_(f),co_(c->shared_from_this()){}
 
             void operator()(){
                 ASIO_HELPER_ENTER_EXIT
@@ -253,7 +253,7 @@ namespace asio_helper{
     }
 
     class async_helper{
-        std::shared_ptr<detail::coroutine_holder> co_;
+        detail::coroutine_holder* co_;
 
         template<class R>
         R await(){
@@ -275,7 +275,7 @@ namespace asio_helper{
         }   
     
     public:
-        async_helper(std::shared_ptr<detail::coroutine_holder> c)
+        async_helper(detail::coroutine_holder* c)
             :co_(c)
         {
 
@@ -284,8 +284,10 @@ namespace asio_helper{
 
         template<class Handler,class F>
         typename Handler::return_type await(F f){
-            typename Handler::callback_type cb = make_callback(Handler());
-            f(cb);
+            {
+                typename Handler::callback_type cb = make_callback(Handler());
+                f(cb);
+             }
             return await<typename Handler::return_type>();
 
         }
@@ -303,9 +305,9 @@ namespace asio_helper{
                 auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
                 pthis->coroutine_caller_ = &ca;
-                auto ptr = pthis->shared_from_this();
+               // auto ptr = pthis->shared_from_this();
                 try{
-                    async_helper helper(ptr);
+                    async_helper helper(pthis);
                     pthis->f_(helper);
                 }
                 catch(std::exception&){
