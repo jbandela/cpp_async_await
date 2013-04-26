@@ -55,11 +55,6 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
             [&](resolve_handler::callback_type cb){
                 resolver_.async_resolve(query,cb);
         });
-        
-
-
-
-
         if(ec) {throw boost::system::system_error(ec);}
 
         // Do async connect
