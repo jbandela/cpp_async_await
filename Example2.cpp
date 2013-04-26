@@ -12,16 +12,12 @@
 // Modified by John R. Bandela
 
 #include "asio_helper.hpp"
-
 #include <iostream>
 #include <istream>
 #include <ostream>
 #include <string>
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
 #include <tuple>
-#include <vector>
-#include <thread>
 
 
 void get_http(boost::asio::io_service& io,std::string server, std::string path){
