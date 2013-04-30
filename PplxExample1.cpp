@@ -12,28 +12,41 @@
 
 #pragma comment(lib,"casablanca110.lib")
 
-int main(){
-    try{
+pplx::task<int> get_t(){
 
     pplx::task<int> t ([]()->int{
         return 5;
     });
 
-    auto t3 = pplx_helper::do_async([t](pplx_helper::async_helper<int> helper)->int{
+    return t;
+
+}
+
+pplx::task<int> get_t3(){
+    return pplx_helper::do_async([](pplx_helper::async_helper<int> helper)->int{
 
         auto sum = 0;
         for(int i = 0; i < 5; ++i){
-            sum+= helper.await(t);
+            sum+= helper.await(get_t());
 
         }
         return sum;
 
-    });   
-    auto t4 = pplx_helper::do_async([t,t3](pplx_helper::async_helper<int> helper)->int{
+    });  
+
+}
+
+int main(){
+    try{
+
+
+ 
+    auto t4 = pplx_helper::do_async([](pplx_helper::async_helper<int> helper)->int{
 
         auto sum = 0;
         for(int i = 0; i < 5; ++i){
-            sum+= helper.await(t3);
+            sum+= helper.await(get_t3());
+            if(i==3)throw std::exception("Exception 2 ");
         }
         return sum;
 

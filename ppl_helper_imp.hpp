@@ -40,7 +40,7 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 
         struct coroutine_holder:std::enable_shared_from_this<coroutine_holder>{
             PPL_HELPER_ENTER_EXIT;
-                typedef boost::coroutines::coroutine<void*(void*)> co_type;
+            typedef boost::coroutines::coroutine<void*(void*)> co_type;
             std::unique_ptr<co_type> coroutine_;
             co_type::caller_type* coroutine_caller_;
             coroutine_holder():coroutine_(),coroutine_caller_(nullptr){}
@@ -83,25 +83,26 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
         template<class R>
         R await(CPP_ASYNC_AWAIT_PPL_TASK(R) t){
             PPL_HELPER_ENTER_EXIT;
-                assert(co_->coroutine_caller_);
+            assert(co_->coroutine_caller_);
             auto co = co_;
             func_type retfunc([co,t](){
                 auto sptr = co->shared_from_this();
-                return t.then([sptr,co](typename detail::task_type<R>::type et)->typename detail::task_type<T>::type{
+                return t.then([sptr](typename detail::task_type<R>::type et)->typename detail::task_type<T>::type{
                     detail::ret_type ret;
                     ret.eptr_ = nullptr;
                     ret.pv_ = nullptr;
                     ret.pv_ = &et;
-                    (*co->coroutine_)(&ret);
+                    (*sptr->coroutine_)(&ret);
                     try{
-                    auto f = *static_cast<func_type*>(co->coroutine_->get());
-                    return f();
+                        auto& f = *static_cast<func_type*>(sptr->coroutine_->get());
+                        throw std::exception("Exception 1 ");
+                        return f();
                     }
-                    catch(std::exception& e){
+                    catch(std::exception&){
                         ret.eptr_ = std::current_exception();
                         ret.pv_ = nullptr;
-                        (*co->coroutine_)(&ret);
-                        throw ;
+                        (*sptr->coroutine_)(&ret);
+                        throw;
                     }
                 });
             });
@@ -144,15 +145,12 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 
                 auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
-               // auto sptr = pthis->shared_from_this();
                 pthis->coroutine_caller_ = &ca;
                 try{
                     PPL_HELPER_ENTER_EXIT;
                     async_helper<return_type> helper(pthis);
-                    //sptr.reset();
                     ret_holder<return_type> ret(pthis->f_,helper);
                     func_type retfunc([ret](){
-                      //  sptr.reset();
                         return task_t([ret](){return ret.get();});   
                     });
                     ca(&retfunc);
@@ -160,7 +158,6 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
                 catch(std::exception&){
                     auto eptr = std::current_exception();
                     func_type retfunc([eptr](){
-                      //  sptr.reset();
                         task_t ret;
                         std::rethrow_exception(eptr);
                         return ret;
