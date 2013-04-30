@@ -16,7 +16,8 @@
 #include <functional>
 
 #ifdef PPL_HELPER_OUTPUT_ENTER_EXIT
-#define PPL_HELPER_ENTER_EXIT ::ppl_helper::detail::EnterExit ppl_helper_enter_exit_var;
+#include <cstdio>
+#define PPL_HELPER_ENTER_EXIT ::CPP_ASYNC_AWAIT_PPL_NAMESPACE::detail::EnterExit ppl_helper_enter_exit_var;
 #else
 #define PPL_HELPER_ENTER_EXIT
 #endif
@@ -26,11 +27,11 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 #ifdef PPL_HELPER_OUTPUT_ENTER_EXIT
         // Used for debugging to make sure all functions are exiting correctly
         struct EnterExit{
-            EnterExit():n_(++number()){ std::cerr << "==" << n_ << " Entering\n";}
+            EnterExit():n_(++number()){ std::printf("==%d Entering\n",n_);}
             int n_;
             std::string s_;
             static int& number(){static int number = 0; return number;}
-            ~EnterExit(){std::cerr << "==" << n_ << " Exiting\n";}
+            ~EnterExit(){std::printf("==%d Exiting\n",n_);}
 
         };
 #endif
@@ -85,14 +86,23 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
                 assert(co_->coroutine_caller_);
             auto co = co_;
             func_type retfunc([co,t](){
-                return t.then([co](typename detail::task_type<R>::type et)->typename detail::task_type<T>::type{
+                auto sptr = co->shared_from_this();
+                return t.then([sptr,co](typename detail::task_type<R>::type et)->typename detail::task_type<T>::type{
                     detail::ret_type ret;
                     ret.eptr_ = nullptr;
                     ret.pv_ = nullptr;
                     ret.pv_ = &et;
                     (*co->coroutine_)(&ret);
+                    try{
                     auto f = *static_cast<func_type*>(co->coroutine_->get());
                     return f();
+                    }
+                    catch(std::exception& e){
+                        ret.eptr_ = std::current_exception();
+                        ret.pv_ = nullptr;
+                        (*co->coroutine_)(&ret);
+                        throw ;
+                    }
                 });
             });
 
@@ -134,22 +144,23 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 
                 auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
-                auto sptr = pthis->shared_from_this();
+               // auto sptr = pthis->shared_from_this();
                 pthis->coroutine_caller_ = &ca;
                 try{
                     PPL_HELPER_ENTER_EXIT;
                     async_helper<return_type> helper(pthis);
+                    //sptr.reset();
                     ret_holder<return_type> ret(pthis->f_,helper);
-                    func_type retfunc([&sptr,ret](){
-                        sptr.reset();
+                    func_type retfunc([ret](){
+                      //  sptr.reset();
                         return task_t([ret](){return ret.get();});   
                     });
                     ca(&retfunc);
                 }
                 catch(std::exception&){
                     auto eptr = std::current_exception();
-                    func_type retfunc([&sptr,eptr](){
-                        sptr.reset();
+                    func_type retfunc([eptr](){
+                      //  sptr.reset();
                         task_t ret;
                         std::rethrow_exception(eptr);
                         return ret;

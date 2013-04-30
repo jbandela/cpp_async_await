@@ -3,14 +3,17 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
+#define PPL_HELPER_OUTPUT_ENTER_EXIT
 #include <pplxtasks.h>
 #include <iostream>
 #include <string>
 #include "pplx_helper.hpp"
+#include <cstdio>
 
 #pragma comment(lib,"casablanca110.lib")
 
 int main(){
+    try{
 
     pplx::task<int> t ([]()->int{
         return 5;
@@ -36,13 +39,13 @@ int main(){
 
     });
 
-    std::cerr << "Called do_async\n";
+    std::printf("Called do_async\n");
 
-    try{
+       //(t && t3 && t4).wait();
         std::cout << t4.get();
     }
     catch(std::exception& e){
-        std::cerr << e.what();
+        std::printf(e.what());
     }
     return 0;
 
