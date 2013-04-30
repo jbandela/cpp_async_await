@@ -85,7 +85,7 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
                 assert(co_->coroutine_caller_);
             auto co = co_;
             func_type retfunc([co,t](){
-                return t.then([co](typename detail::task_type<R>::type et)->typename detail::task_type<R>::type{
+                return t.then([co](typename detail::task_type<R>::type et)->typename detail::task_type<T>::type{
                     detail::ret_type ret;
                     ret.eptr_ = nullptr;
                     ret.pv_ = nullptr;
