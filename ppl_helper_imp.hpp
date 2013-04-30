@@ -100,7 +100,6 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
                     (*sptr->coroutine_)(&ret);
                     try{
                         func_type f(std::move(*static_cast<func_type*>(sptr->coroutine_->get())));
-                        throw std::exception("Exception 1 ");
                         return f();
                     }
                     catch(std::exception&){
@@ -175,15 +174,9 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 
             typename detail::task_type<return_type>::type run(){
                 coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,this));
-
-
-                auto sptr = shared_from_this();
-                auto f = [sptr](){
-                func_type f(std::move(*static_cast<func_type*>(sptr->coroutine_->get())));
+                func_type f(std::move(*static_cast<func_type*>(coroutine_->get())));
                 return f();
-                };
-                sptr.reset();
-                return detail::task_type<return_type>::type (f);
+
             }
         };
 
