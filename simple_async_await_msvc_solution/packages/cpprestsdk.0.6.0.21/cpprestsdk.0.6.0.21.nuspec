@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>cpprestsdk</id>
+    <version>0.6.0.21</version>
+    <title>C++ REST SDK</title>
+    <authors>Microsoft Corporation</authors>
+    <owners>Microsoft Corporation</owners>
+    <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
+    <projectUrl>https://casablanca.codeplex.com/</projectUrl>
+    <iconUrl>https://download-codeplex.sec.s-msft.com/Download?ProjectName=casablanca&amp;DownloadId=630102&amp;Build=20425</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This library is a Microsoft effort to support cloud-based client-server communication in native code using a modern asynchronous C++ API design.
+
+The C++ REST SDK (codename "Casablanca") is a project to start exploring how to best support C++ developers who want to take advantage of the radical shift in software architecture that cloud computing represents.
+
+This library also gives you a convenient model for composing asynchronous operations. Whether your application is compute-intensive or I/O-driven,  its scalability is likely to require careful resource utilization. Asynchronous APIs are great for scalability,  but can be very hard to use when all you have is C-level functionality. Fortunately,  C++ 11 offers a whole new set of capabilities that can make dealing with asynchronous operations easy,  and the library takes advantage of that throughout.</description>
+    <summary>Casablanca is your toolbox for accessing and authoring connected applications using modern C++ features and best practices.</summary>
+    <releaseNotes>Release of C++ Rest SDK 0.6 libraries.</releaseNotes>
+    <copyright>Copyright 2013</copyright>
+    <language />
+    <tags>REST, native, CoApp</tags>
+    <dependencies>
+      <dependency id="cpprestsdk.redist" version="0.6.0.21" />
+    </dependencies>
+  </metadata>
+</package>

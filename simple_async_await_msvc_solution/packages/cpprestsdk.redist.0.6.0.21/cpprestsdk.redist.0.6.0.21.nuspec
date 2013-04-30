@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>cpprestsdk.redist</id>
+    <version>0.6.0.21</version>
+    <title>C++ REST SDK Redist</title>
+    <authors>Microsoft Corporation</authors>
+    <owners>Microsoft Corporation</owners>
+    <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
+    <projectUrl>https://casablanca.codeplex.com/</projectUrl>
+    <iconUrl>https://download-codeplex.sec.s-msft.com/Download?ProjectName=casablanca&amp;DownloadId=630102&amp;Build=20425</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Redistributable components for package 'cpprestsdk'. This package should only be installed as a dependency. 
+(This is not the package you are looking for).</description>
+    <summary>Redistributable components for for package 'cpprestsdk'</summary>
+    <releaseNotes>Release of C++ Rest SDK 0.6 libraries.</releaseNotes>
+    <copyright>Copyright 2013</copyright>
+    <tags>REST, native, CoApp</tags>
+  </metadata>
+</package>
