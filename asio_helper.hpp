@@ -287,6 +287,10 @@ namespace asio_helper{
 
         }
 
+        template<class F>
+        void post(F f){
+            co_->io_.post(f);
+        };
 
 
     };

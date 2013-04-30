@@ -8,6 +8,14 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 
+template<class F>
+void get_async_value(boost::asio::io_service& io, F f){
+
+    asio_helper::do_async(io,[f,&io](asio_helper::async_helper h){
+        h.post(std::bind(f,42));
+    });
+}
+
 
 int main()
 {
@@ -37,6 +45,12 @@ int main()
                 t.expires_from_now(boost::posix_time::seconds(1));
 
             }
+            typedef asio_helper::handlers::handler<int> int_handler;
+
+            std::cout << helper.await<int_handler>(
+                [&](int_handler::callback_type cb){
+                   get_async_value(io,cb);
+            }) << std::endl;
 
         });
 
