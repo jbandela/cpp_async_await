@@ -17,6 +17,7 @@
 
 #ifdef PPL_HELPER_OUTPUT_ENTER_EXIT
 #include <cstdio>
+#include <atomic>
 #define PPL_HELPER_ENTER_EXIT ::CPP_ASYNC_AWAIT_PPL_NAMESPACE::detail::EnterExit ppl_helper_enter_exit_var;
 #else
 #define PPL_HELPER_ENTER_EXIT
@@ -27,11 +28,15 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 #ifdef PPL_HELPER_OUTPUT_ENTER_EXIT
         // Used for debugging to make sure all functions are exiting correctly
         struct EnterExit{
-            EnterExit():n_(++number()){ std::printf("==%d Entering\n",n_);}
+            EnterExit():n_(++number()){increment(); std::printf("==%d Entering\n",n_);}
             int n_;
             std::string s_;
             static int& number(){static int number = 0; return number;}
-            ~EnterExit(){std::printf("==%d Exiting\n",n_);}
+            static std::atomic<int>& counter(){static std::atomic<int> counter_ = 0; return counter_;}
+            static void increment(){++counter();}
+            static void decrement(){--counter();}
+            static void check_all_destroyed(){assert(counter()==0);if(counter())throw std::exception("Not all EnterExit destroyed");};
+            ~EnterExit(){decrement();std::printf("==%d Exiting\n",n_);}
 
         };
 #endif
@@ -94,7 +99,7 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
                     ret.pv_ = &et;
                     (*sptr->coroutine_)(&ret);
                     try{
-                        auto& f = *static_cast<func_type*>(sptr->coroutine_->get());
+                        func_type f(std::move(*static_cast<func_type*>(sptr->coroutine_->get())));
                         throw std::exception("Exception 1 ");
                         return f();
                     }
@@ -170,8 +175,15 @@ namespace CPP_ASYNC_AWAIT_PPL_NAMESPACE{
 
             typename detail::task_type<return_type>::type run(){
                 coroutine_.reset(new coroutine_holder::co_type(&coroutine_function,this));
-                auto f = *static_cast<func_type*>(coroutine_->get());
+
+
+                auto sptr = shared_from_this();
+                auto f = [sptr](){
+                func_type f(std::move(*static_cast<func_type*>(sptr->coroutine_->get())));
                 return f();
+                };
+                sptr.reset();
+                return detail::task_type<return_type>::type (f);
             }
         };
 

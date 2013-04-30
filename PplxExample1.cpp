@@ -40,27 +40,29 @@ int main(){
     try{
 
 
- 
-    auto t4 = pplx_helper::do_async([](pplx_helper::async_helper<int> helper)->int{
 
-        auto sum = 0;
-        for(int i = 0; i < 5; ++i){
-            sum+= helper.await(get_t3());
-            if(i==3)throw std::exception("Exception 2 ");
-        }
-        return sum;
+        auto t4 = pplx_helper::do_async([](pplx_helper::async_helper<int> helper)->int{
 
-    });
+            auto sum = 0;
+            for(int i = 0; i < 5; ++i){
+                sum+= helper.await(get_t3());
+                if(i==3)throw std::exception("Exception 2 ");
+            }
+            return sum;
 
-    std::printf("Called do_async\n");
+        });
 
-       //(t && t3 && t4).wait();
+        std::printf("Called do_async\n");
+
+        //(t && t3 && t4).wait();
         std::cout << t4.get();
     }
     catch(std::exception& e){
         std::printf(e.what());
     }
+    pplx_helper::detail::EnterExit::check_all_destroyed();
     return 0;
+
 
 
 }
