@@ -17,7 +17,8 @@
 
 #ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
 #define ASIO_HELPER_ENTER_EXIT ::asio_helper::detail::EnterExit asio_helper_enter_exit_var;
-#include <iostream>
+#include <cstdio>
+#include <atomic>
 #else
 #define ASIO_HELPER_ENTER_EXIT
 #endif
@@ -27,11 +28,15 @@ namespace asio_helper{
 #ifdef ASIO_HELPER_OUTPUT_ENTER_EXIT
         // Used for debugging to make sure all functions are exiting correctly
         struct EnterExit{
-            EnterExit():n_(++number()){ std::cerr << "==" << n_ << " Entering\n";}
+            EnterExit():n_(++number()){increment(); std::printf("==%d Entering\n",n_);}
             int n_;
             std::string s_;
             static int& number(){static int number = 0; return number;}
-            ~EnterExit(){std::cerr << "==" << n_ << " Exiting\n";}
+            static std::atomic<int>& counter(){static std::atomic<int> counter_ = 0; return counter_;}
+            static void increment(){++counter();}
+            static void decrement(){--counter();}
+            static void check_all_destroyed(){assert(counter()==0);if(counter())throw std::exception("Not all EnterExit destroyed");};
+            ~EnterExit(){decrement();std::printf("==%d Exiting\n",n_);}
 
         };
 #endif
@@ -304,7 +309,6 @@ namespace asio_helper{
                 auto p = ca.get();
                 auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
                 pthis->coroutine_caller_ = &ca;
-                // auto ptr = pthis->shared_from_this();
                 try{
                     async_helper helper(pthis);
                     pthis->f_(helper);

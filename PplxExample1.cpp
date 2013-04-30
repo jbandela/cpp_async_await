@@ -54,7 +54,6 @@ int main(){
 
         std::printf("Called do_async\n");
 
-        //(t && t3 && t4).wait();
         std::cout << t4.get();
     }
     catch(std::exception& e){
