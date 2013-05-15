@@ -253,10 +253,36 @@ namespace asio_helper{
     }
 
     class async_helper{
+
+    public:
+        async_helper(detail::coroutine_holder* c)
+            :co_(c)
+        {
+
+        }
+
+
+        template<class Handler,class F>
+        typename Handler::return_type await(F f){
+            {
+                typename Handler::callback_type cb = make_callback(Handler());
+                f(cb);
+            }
+            return await_imp<typename Handler::return_type>();
+
+        }
+
+        template<class F>
+        void post(F f){
+            co_->io_.post(f);
+        }
+
+    private:
+
         detail::coroutine_holder* co_;
 
         template<class R>
-        R await(){
+        R await_imp(){
             ASIO_HELPER_ENTER_EXIT;
             assert(co_->coroutine_caller_);
             (*co_->coroutine_caller_)(nullptr);
@@ -274,36 +300,15 @@ namespace asio_helper{
             return co_->strand_.wrap(ret);
         }   
 
-    public:
-        async_helper(detail::coroutine_holder* c)
-            :co_(c)
-        {
-
-        }
-
-
-        template<class Handler,class F>
-        typename Handler::return_type await(F f){
-            {
-                typename Handler::callback_type cb = make_callback(Handler());
-                f(cb);
-            }
-            return await<typename Handler::return_type>();
-
-        }
-
-        template<class F>
-        void post(F f){
-            co_->io_.post(f);
-        };
-
 
     };
     namespace detail{
         template<class F>
         struct simple_async_function_holder:public coroutine_holder{
 
+            // The user function
             F f_;
+
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 ASIO_HELPER_ENTER_EXIT;
                 auto p = ca.get();
@@ -330,8 +335,8 @@ namespace asio_helper{
 
     template<class F>
     void do_async(boost::asio::io_service& io,F f){
-        auto ret = std::make_shared<detail::simple_async_function_holder<F>>(io,f);
-        io.post(ret->strand_.wrap([ret](){ret->run();}));
+        auto sp = std::make_shared<detail::simple_async_function_holder<F>>(io,f);
+        io.post(sp->strand_.wrap([sp](){sp->run();}));
     }
 }
 
