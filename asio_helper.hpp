@@ -260,7 +260,7 @@ namespace asio_helper{
             ASIO_HELPER_ENTER_EXIT;
             assert(co_->coroutine_caller_);
             (*co_->coroutine_caller_)(nullptr);
-            auto ret = reinterpret_cast<detail::ret_type*>(co_->coroutine_caller_->get());
+            auto ret = static_cast<detail::ret_type*>(co_->coroutine_caller_->get());
             if(ret->eptr_){
                 std::rethrow_exception(ret->eptr_);
             }
@@ -307,7 +307,7 @@ namespace asio_helper{
             static void coroutine_function(coroutine_holder::co_type::caller_type& ca){
                 ASIO_HELPER_ENTER_EXIT;
                 auto p = ca.get();
-                auto pthis = reinterpret_cast<simple_async_function_holder*>(p);
+                auto pthis = static_cast<simple_async_function_holder*>(p);
                 pthis->coroutine_caller_ = &ca;
                 try{
                     async_helper helper(pthis);
