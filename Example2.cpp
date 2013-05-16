@@ -60,24 +60,17 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         if(ec) {throw boost::system::system_error(ec);}
 
         // Do async connect
-        std::tie(ec,std::ignore) = helper.await<composed_connect_handler>(
-            [&](composed_connect_handler::callback_type cb){
-                boost::asio::async_connect(socket_,endpoint_iterator,cb);    
-        });
+        std::tie(ec,std::ignore) = helper.await_async_connect(socket_,endpoint_iterator);    
+        
         if(ec){throw boost::system::system_error(ec);}
 
         // Connection was successful, send request
-        std::tie(ec,std::ignore) = helper.await<write_handler>(
-            [&](write_handler::callback_type cb){
-                boost::asio::async_write(socket_,request_,cb);
-        });
+        std::tie(ec,std::ignore) = helper.await_async_write(socket_,request_);
+        
         if(ec){throw boost::system::system_error(ec);}
 
         // Read the response status line
-        std::tie(ec,std::ignore) = helper.await<read_handler>(
-            [&](read_handler::callback_type cb){
-                boost::asio::async_read_until(socket_,response_,"\r\n",cb);
-        });
+        std::tie(ec,std::ignore) = helper.await_async_read_until(socket_,response_,"\r\n");
         if(ec){throw boost::system::system_error(ec);}
 
         // Check that the response is OK
@@ -101,10 +94,7 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         }
 
         // Read the response headers, which are terminated by a blank line.
-        std::tie(ec,std::ignore) = helper.await<read_handler>(
-           [&](read_handler::callback_type cb){
-                boost::asio::async_read_until(socket_, response_, "\r\n\r\n",cb);
-        });
+        std::tie(ec,std::ignore) = helper.await_async_read_until(socket_, response_, "\r\n\r\n");
         if(ec){throw boost::system::system_error(ec);}
 
         // Process the response headers.
@@ -122,11 +112,9 @@ void get_http(boost::asio::io_service& io,std::string server, std::string path){
         bool done = false;
         while(!done){
 
-            std::tie(ec,std::ignore) = helper.await<read_handler>(
-                [&](read_handler::callback_type cb){ 
-                    boost::asio::async_read(socket_, response_,
-                        boost::asio::transfer_at_least(1), cb);         
-            });
+            std::tie(ec,std::ignore) = helper.await_async_read(socket_, response_,
+                        boost::asio::transfer_at_least(1));
+
             if(ec && ec != boost::asio::error::eof){throw boost::system::system_error(ec);}
             done = (ec == boost::asio::error::eof);
             // Write all of the data so far

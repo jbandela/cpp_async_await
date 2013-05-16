@@ -277,6 +277,92 @@ namespace asio_helper{
             co_->io_.post(f);
         }
 
+      // Overloads for async_read
+      template<class T0, class T1>
+      asio_helper::handlers::read_handler::return_type await_async_read(T0&& t0, T1&& t1){
+          return await<asio_helper::handlers::read_handler>([&](asio_helper::handlers::read_handler::callback_type cb){
+              boost::asio::async_read(std::forward<T0>(t0),std::forward<T1>(t1),cb);
+          });
+      }
+      template<class T0, class T1, class T2>
+      asio_helper::handlers::read_handler::return_type await_async_read(T0&& t0, T1&& t1, T2&& t2){
+          return await<asio_helper::handlers::read_handler>([&](asio_helper::handlers::read_handler::callback_type cb){
+              boost::asio::async_read(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),cb);
+          });
+      }
+
+      // Overloads for async_read_at
+      template<class T0, class T1, class T2>
+      asio_helper::handlers::read_handler::return_type await_async_read_at(T0&& t0, T1&& t1, T2&& t2){
+          return await<asio_helper::handlers::read_handler>([&](asio_helper::handlers::read_handler::callback_type cb){
+              boost::asio::async_read_at(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),cb);
+          });
+      }
+      template<class T0, class T1, class T2,class T3>
+      asio_helper::handlers::read_handler::return_type await_async_read_at(T0&& t0, T1&& t1, T2&& t2, T3&& t3){
+          return await<asio_helper::handlers::read_handler>([&](asio_helper::handlers::read_handler::callback_type cb){
+              boost::asio::async_read_at(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),std::forward<T3>(t3),cb);
+          });
+      } 
+
+
+      // Overloads for async_read_until
+      template<class T0, class T1, class T2>
+      asio_helper::handlers::read_handler::return_type await_async_read_until(T0&& t0, T1&& t1, T2&& t2){
+          return await<asio_helper::handlers::read_handler>([&](asio_helper::handlers::read_handler::callback_type cb){
+              boost::asio::async_read_until(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),cb);
+          });
+      }
+
+      // Overloads for async_write
+      template<class T0, class T1>
+      asio_helper::handlers::write_handler::return_type await_async_write(T0&& t0, T1&& t1){
+          return await<asio_helper::handlers::write_handler>([&](asio_helper::handlers::write_handler::callback_type cb){
+              boost::asio::async_write(std::forward<T0>(t0),std::forward<T1>(t1),cb);
+          });
+      }
+      template<class T0, class T1, class T2>
+      asio_helper::handlers::write_handler::return_type await_async_write(T0&& t0, T1&& t1, T2&& t2){
+          return await<asio_helper::handlers::write_handler>([&](asio_helper::handlers::write_handler::callback_type cb){
+              boost::asio::async_write(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),cb);
+          });
+      }
+
+      // Overloads for async_write_at
+      template<class T0, class T1, class T2>
+      asio_helper::handlers::write_handler::return_type await_async_write_at(T0&& t0, T1&& t1, T2&& t2){
+          return await<asio_helper::handlers::write_handler>([&](asio_helper::handlers::write_handler::callback_type cb){
+              boost::asio::async_write_at(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),cb);
+          });
+      }
+      template<class T0, class T1, class T2,class T3>
+      asio_helper::handlers::write_handler::return_type await_async_write_at(T0&& t0, T1&& t1, T2&& t2, T3&& t3){
+          return await<asio_helper::handlers::write_handler>([&](asio_helper::handlers::write_handler::callback_type cb){
+              boost::asio::async_write_at(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),std::forward<T3>(t3),cb);
+          });
+      } 
+
+
+      // overloads for async_connect
+      template<class T0, class T1>
+      asio_helper::handlers::composed_connect_handler::return_type await_async_connect(T0&& t0, T1&& t1){
+          return await<asio_helper::handlers::composed_connect_handler>([&](asio_helper::handlers::composed_connect_handler::callback_type cb){
+              boost::asio::async_connect(std::forward<T0>(t0),std::forward<T1>(t1),cb);
+          });
+      }
+      template<class T0, class T1,class T2>
+      asio_helper::handlers::composed_connect_handler::return_type await_async_connect(T0&& t0, T1&& t1, T2&& t2){
+          return await<asio_helper::handlers::composed_connect_handler>([&](asio_helper::handlers::composed_connect_handler::callback_type cb){
+              boost::asio::async_connect(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),cb);
+          });
+      }
+      template<class T0, class T1,class T2,class T3>
+      asio_helper::handlers::composed_connect_handler::return_type await_async_connect(T0&& t0, T1&& t1, T2&& t2,T3&& t3){
+          return await<asio_helper::handlers::composed_connect_handler>([&](asio_helper::handlers::composed_connect_handler::callback_type cb){
+              boost::asio::async_connect(std::forward<T0>(t0),std::forward<T1>(t1),std::forward<T2>(t2),std::forward<T3>(t3),cb);
+          });
+      }
+
     private:
 
         detail::coroutine_holder* co_;
