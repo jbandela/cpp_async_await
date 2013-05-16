@@ -25,10 +25,8 @@ int main()
         boost::system::error_code ec;
 
         // Write the prompt
-        std::tie(ec,std::ignore) = helper.await<write_handler>(
-            [&](write_handler::callback_type cb){
-                asio::async_write(out,asio::buffer( "Please type in your name: " ),cb);
-        });
+        std::tie(ec,std::ignore) = helper.await_async_write(out,asio::buffer( "Please type in your name: " ));
+        
 
         // Prepare the buffer to receive no more than 10 characters
         const std::size_t bufferSize = 10;
@@ -36,27 +34,21 @@ int main()
         response.prepare( bufferSize );
 
         // Read until a newline
-        std::tie(ec,std::ignore) = helper.await<read_handler>(
-            [&](read_handler::callback_type cb){
-                asio::async_read_until(in,response,'\n',cb);
-        });
+        std::tie(ec,std::ignore) = helper.await_async_read_until(in,response,'\n');
+        
         
         if( ec )
         {
             // If the name is too long, print out a prompt
             if( ec == asio::error::not_found ) {
 
-                std::tie(ec,std::ignore) = helper.await<write_handler>(
-                    [&](write_handler::callback_type cb){
-                        asio::async_write(out,asio::buffer( "\nYour name is too long, try a nickname\n" ),cb);
-                });
+                std::tie(ec,std::ignore) = helper.await_async_write(out,asio::buffer( "\nYour name is too long, try a nickname\n" ));
+                
             } 
             else {
                 auto message = std::string("Error: ") + ec.message() + "\n" ;
-                std::tie(ec,std::ignore) = helper.await<write_handler>(
-                    [&](write_handler::callback_type cb){
-                        asio::async_write(out,asio::buffer( message ),cb);
-                });
+                std::tie(ec,std::ignore) = helper.await_async_write(out,asio::buffer( message ));
+                
             }
         }
         else
@@ -65,13 +57,10 @@ int main()
             std::string name;
             std::getline( is, name, '\n' );
             auto message = "Hello " + name + "!\n" ;
-            helper.await<write_handler>(
-                [&](write_handler::callback_type cb){
-                    asio::async_write(out,asio::buffer( message ),cb);
-            });
+            helper.await_async_write(out,asio::buffer( message ));
+            
         }
     });
 
-    // Run everything
     io.run();
 }
